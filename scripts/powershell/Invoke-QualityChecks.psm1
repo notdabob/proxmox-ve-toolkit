@@ -460,7 +460,7 @@ function Test-MarkdownFile {
         Write-Information "" -InformationAction Continue
         Write-Information "📊 Markdown Linting Summary:" -InformationAction Continue
         Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
-        Write-Information "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })"
+        Write-Information "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })" -InformationAction Continue
 
         return $allPassed
     } catch {
