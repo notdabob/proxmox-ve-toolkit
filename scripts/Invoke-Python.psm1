@@ -1,11 +1,11 @@
-function Run-Python {
+function Invoke-Python {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true, Position=0)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$ScriptOrArgs
     )
     $pythonCmd = $null
-    foreach ($cmd in @('python3','python','py')) {
+    foreach ($cmd in @('python3', 'python', 'py')) {
         if (Get-Command $cmd -ErrorAction SilentlyContinue) {
             $pythonCmd = $cmd
             break
@@ -27,7 +27,7 @@ function Run-Python {
             Write-Host "Please install Python manually: https://www.python.org/downloads/"
             exit 1
         }
-        foreach ($cmd in @('python3','python','py')) {
+        foreach ($cmd in @('python3', 'python', 'py')) {
             if (Get-Command $cmd -ErrorAction SilentlyContinue) {
                 $pythonCmd = $cmd
                 break
@@ -41,4 +41,4 @@ function Run-Python {
     & $pythonCmd $ScriptOrArgs
 }
 
-Export-ModuleMember -Function Run-Python
+Export-ModuleMember -Function Invoke-Python
