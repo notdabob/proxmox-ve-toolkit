@@ -51,7 +51,7 @@ function Install-AllComponents {
         # Install quality check tools
         Write-Host ""
         Write-Host "📦 Installing quality check tools..."
-        Install-AllQualityTools -Scope CurrentUser
+        Install-AllQualityTool -Scope CurrentUser
         
         # Install SuperClaude
         Install-SuperClaude

@@ -48,7 +48,7 @@ jobs:
             Import-Module ./scripts/powershell/Install-QualityTools.psm1 -Force
             
             # Install all quality tools (no sudo required for markdownlint via npx)
-            Install-AllQualityTools -Force
+            Install-AllQualityTool -Force
             
             Write-Host '✅ All quality tools installed successfully' -ForegroundColor Green
           "
@@ -69,7 +69,7 @@ jobs:
             }
             
             # Show installed versions
-            Show-ToolVersions
+            Show-ToolVersion
           "
 
       - name: Run Comprehensive Quality Checks

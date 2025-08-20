@@ -180,9 +180,9 @@ This project includes PowerShell modules for automation and quality assurance:
 ```powershell
 # Quality Tools Management
 Import-Module ./scripts/powershell/Install-QualityTools.psm1
-Install-AllQualityTools                    # Install all quality check tools
+Install-AllQualityTool                    # Install all quality check tools
 Test-QualityToolsInstallation             # Verify tools are working
-Show-ToolVersions                          # Display installed tool versions
+Show-ToolVersion                          # Display installed tool versions
 
 # Quality Checks
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1

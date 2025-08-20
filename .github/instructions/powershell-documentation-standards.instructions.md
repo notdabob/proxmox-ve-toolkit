@@ -117,7 +117,7 @@ When functions depend on other modules:
 ```powershell
 .NOTES
     Dependencies: Install-QualityTools.psm1, Write-Log.psm1
-    Prerequisite: Run Install-AllQualityTools before using this function
+    Prerequisite: Run Install-AllQualityTool before using this function
     Related: Get-ModuleConfiguration, Set-ModuleConfiguration
 ```
 

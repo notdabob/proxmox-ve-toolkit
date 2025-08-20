@@ -353,7 +353,7 @@ function Install-AllQualityTool {
         Write-Information "" -InformationAction Continue
         
         # Display installed versions
-        Show-ToolVersions
+        Show-ToolVersion
     } catch {
         Write-Error "❌ Quality tools installation failed: $($_.Exception.Message)"
         throw
@@ -540,13 +540,3 @@ Export-ModuleMember -Function @(
     'Show-ToolVersion',
     'Test-QualityToolsInstallation'
 )
-
-# Export aliases for backward compatibility  
-Export-ModuleMember -Alias @(
-    'Install-AllQualityTools',
-    'Show-ToolVersions'
-)
-
-# Create the actual aliases
-New-Alias -Name 'Install-AllQualityTools' -Value 'Install-AllQualityTool' -Force
-New-Alias -Name 'Show-ToolVersions' -Value 'Show-ToolVersion' -Force

@@ -486,7 +486,7 @@ catch {
 
 # Use module functions
 try {
-    Install-AllQualityTools -Scope CurrentUser
+    Install-AllQualityTool -Scope CurrentUser
 }
 catch {
     Write-Error "❌ Quality tools installation failed: $($_.Exception.Message)"
