@@ -1,13 +1,13 @@
 ---
 name: ❓ Question
-description: Ask a question about SuperClaude usage or configuration
+description: Ask a question about Proxmox VE Toolkit usage or configuration
 title: "[Question] "
-labels: ["question", "help-wanted"]
+labels: ["question", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have a question about SuperClaude? We're here to help!
+        Have a question about the Proxmox VE Toolkit? We're here to help!
         **Tip:** Consider using [Discussions](../../discussions) for general
         questions and community help.
 
@@ -19,8 +19,8 @@ body:
       options:
         - Installation/Setup
         - Command Usage
-        - Persona Configuration
-        - MCP Integration
+        - PowerShell Configuration
+        - Quality Checks
         - Troubleshooting
         - Best Practices
         - Other
@@ -54,10 +54,9 @@ body:
       label: Current Configuration
       description: Share relevant configuration or commands you're using
       placeholder: |
-        ```
-        /command --flags
-        Persona: architect
-        Claude Code version: latest
+        ```powershell
+        Install-AllQualityTool -Scope CurrentUser
+        Invoke-AllQualityCheck -Path .
         ```
     validations:
       required: false

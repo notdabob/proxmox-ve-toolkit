@@ -16,7 +16,7 @@ into PowerShell sessions.
 
 Each module should have one clear purpose:
 
-- ✅ `Install-QualityTools.psm1` - Handles quality tool installation
+- ✅ `Install-QualityTool.psm1` - Handles quality tool installation
 - ✅ `Invoke-QualityChecks.psm1` - Performs quality checking operations
 - ✅ `Invoke-Python.psm1` - Cross-platform Python execution
 - ❌ `Utilities.psm1` - Too generic, unclear purpose
@@ -606,7 +606,7 @@ When modules depend on other modules:
 ```powershell
 # In the dependent module
 $RequiredModules = @(
-    @{ ModuleName = 'Install-QualityTools'; ModuleVersion = '1.0.0' },
+    @{ ModuleName = 'Install-QualityTool'; ModuleVersion = '1.0.0' },
     @{ ModuleName = 'Invoke-QualityChecks'; RequiredVersion = '1.2.0' }
 )
 

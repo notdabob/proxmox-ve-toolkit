@@ -101,7 +101,7 @@ function Confirm-Action {
     param(
         [Parameter(Mandatory)][string]$Prompt
     )
-    $resp = Read-Host "$Prompt (y/N)"
+    $resp = Read-Host "$Prompt [y/N]"
     return $resp -imatch '^(y|yes)$'
 }
 
@@ -174,14 +174,7 @@ function Test-SSHConnection {
         if ($sess) { Remove-SSHSession $sess | Out-Null }
         return $true
     } catch {
-    $sess = $null
-    try {
-        $sess = New-SSHSession -ComputerName $ComputerName -Credential (Get-SSHCredential) -ConnectTimeout 3 -AcceptKey -ErrorAction Stop
-        return $true
-    } catch {
         return $false
-    } finally {
-        if ($sess) { Remove-SSHSession $sess | Out-Null }
     }
 }
 

@@ -45,7 +45,7 @@ jobs:
             Write-Host '🚀 Installing quality tools using automated modules...' -ForegroundColor Cyan
             
             # Import and use our quality tools installation module
-            Import-Module ./scripts/powershell/Install-QualityTools.psm1 -Force
+            Import-Module ./scripts/powershell/Install-QualityTool.psm1 -Force
             
             # Install all quality tools (no sudo required for markdownlint via npx)
             Install-AllQualityTool -Force
@@ -58,7 +58,7 @@ jobs:
           pwsh -Command "
             Write-Host '🧪 Verifying tool installation...' -ForegroundColor Blue
             
-            Import-Module ./scripts/powershell/Install-QualityTools.psm1 -Force
+            Import-Module ./scripts/powershell/Install-QualityTool.psm1 -Force
             
             # Test all tools are available
             if (Test-QualityToolsInstallation) {
@@ -100,7 +100,7 @@ jobs:
           echo "📊 Automated Quality Check Summary"
           echo "=================================="
           echo "This workflow uses the project's automated quality check modules:"
-          echo "- PowerShell: PSScriptAnalyzer via Install-QualityTools.psm1"
+          echo "- PowerShell: PSScriptAnalyzer via Install-QualityTool.psm1"
           echo "- Shell Scripts: shellcheck via system package manager"
           echo "- YAML Files: yq validation via automated installation"
           echo "- Markdown Files: markdownlint via npx (no sudo required)"

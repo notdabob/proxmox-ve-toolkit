@@ -476,7 +476,7 @@ When scripts need to use modules from the project:
 ```powershell
 # Import project modules with error handling
 try {
-    $modulePath = Join-Path $PSScriptRoot "../powershell/Install-QualityTools.psm1"
+    $modulePath = Join-Path $PSScriptRoot "../powershell/Install-QualityTool.psm1"
     Import-Module $modulePath -Force -ErrorAction Stop
 }
 catch {
