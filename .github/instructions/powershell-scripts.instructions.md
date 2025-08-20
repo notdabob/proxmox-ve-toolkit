@@ -13,7 +13,10 @@ executables, installers, utilities, or cmdlets that perform specific tasks.
 
 ### Script Header Requirements
 
-Every `.ps1` script MUST include a comprehensive header. All sections are mandatory to ensure clarity and consistency.
+Every `.ps1` script MUST include a comprehensive header following the unified PowerShell documentation
+standards. See `powershell-documentation-standards.instructions.md` for complete requirements.
+
+**Quick Reference - All sections are mandatory:**
 
 ```powershell
 <#
