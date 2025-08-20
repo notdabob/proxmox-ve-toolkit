@@ -1,317 +1,319 @@
 ---
-applyTo: ["scripts/**/*.ps1", "scripts/**/*.psm1"]
+applyTo: ["scripts/**/*.ps1", "scripts/**/*.psm1", "scripts/**/*.psd1"]
 ---
 
-# PowerShell Scripts Instructions
+# PowerShell Cross-Platform Guidelines
 
 ## Overview
 
-This project uses PowerShell 7.0+ for cross-platform script automation. Scripts must work identically on Windows, macOS, and Linux.
+This file provides general cross-platform guidelines for PowerShell development in the Proxmox VE toolkit.
+For specific guidance on scripts, modules, or architecture, refer to the specialized instruction files:
 
-## PowerShell Standards
+- **Scripts (`.ps1`)**: See `powershell-scripts.instructions.md`
+- **Modules (`.psm1`, `.psd1`)**: See `powershell-modules.instructions.md`
+- **Architecture & Organization**: See `powershell-architecture.instructions.md`
 
-### Compatibility Requirements
+## Cross-Platform Compatibility Requirements
 
-- Use PowerShell 7.0+ compatible syntax only
-- Test scripts on multiple platforms when possible
-- Avoid Windows-specific cmdlets unless absolutely necessary
-- Use cross-platform file path handling
+### PowerShell Version Support
 
-### Module Structure
+- **Required**: PowerShell 7.0+ for all scripts and modules
+- **Testing**: Validate on Windows, macOS, and Linux when possible
+- **Syntax**: Use only cross-platform compatible PowerShell features
 
-Follow the established pattern for PowerShell modules:
+### Platform Detection
 
-```powershell
-# Module header with description
-<#
-.SYNOPSIS
-    Brief description of the module's purpose
-
-.DESCRIPTION
-    Detailed description of what the module does
-
-.EXAMPLE
-    Import-Module ./scripts/ModuleName.psm1
-    Use-ModuleFunction -Parameter "value"
-#>
-
-# Parameter validation
-param(
-    [Parameter(Mandatory=$true)]
-    [string]$RequiredParam,
-
-    [Parameter(Mandatory=$false)]
-    [string]$OptionalParam = "DefaultValue"
-)
-
-# Error handling
-$ErrorActionPreference = "Stop"
-
-# Function definitions with proper documentation
-function Get-SomethingUseful {
-    <#
-    .SYNOPSIS
-        Brief description of function
-
-    .PARAMETER InputValue
-        Description of the parameter
-
-    .EXAMPLE
-        Get-SomethingUseful -InputValue "test"
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$InputValue
-    )
-
-    # Implementation here
-}
-
-# Export functions
-Export-ModuleMember -Function Get-SomethingUseful
-```
-
-### Error Handling
-
-- Set `$ErrorActionPreference = "Stop"` for consistent error behavior
-- Use try/catch blocks for operations that might fail
-- Provide meaningful error messages
-- Clean up resources in finally blocks when needed
-
-Example:
+Use built-in platform variables for conditional logic:
 
 ```powershell
-try {
-    $result = Invoke-SomeOperation -Path $FilePath
-    Write-Host "✅ Operation completed successfully"
-    return $result
-}
-catch {
-    Write-Error "❌ Failed to complete operation: $($_.Exception.Message)"
-    throw
+if ($IsWindows) {
+    # Windows-specific code
+    $PathSeparator = ";"
+    $DefaultEditor = "notepad.exe"
+} elseif ($IsMacOS) {
+    # macOS-specific code
+    $PathSeparator = ":"
+    $DefaultEditor = "nano"
+} elseif ($IsLinux) {
+    # Linux-specific code
+    $PathSeparator = ":"
+    $DefaultEditor = "nano"
 }
 ```
 
-### Cross-Platform File Handling
+### File System Operations
 
-- Use `Join-Path` for combining paths
-- Use `Test-Path` before file operations
-- Handle different path separators automatically
-- Use appropriate file encoding (UTF-8)
-
-Example:
+Always use PowerShell cmdlets for cross-platform compatibility:
 
 ```powershell
+# ✅ Cross-platform file operations
 $ConfigPath = Join-Path $PSScriptRoot "config.yaml"
-if (-not (Test-Path $ConfigPath)) {
-    throw "Configuration file not found at: $ConfigPath"
-}
+$TempDir = [System.IO.Path]::GetTempPath()
+$UserHome = [System.Environment]::GetFolderPath("UserProfile")
+
+# ✅ Path handling
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$OutputFile = Join-Path $ScriptDir "output.log"
+
+# ❌ Avoid platform-specific paths
+$ConfigPath = "$PSScriptRoot\config.yaml"  # Windows only
+$LogFile = "/tmp/app.log"                  # Unix only
 ```
 
-## Project-Specific Patterns
+### Package Manager Integration
 
-### Python Integration
-
-Follow the pattern established in `Run-Python.psm1`:
-
-- Detect available Python installations (`python3`, `python`, `py`)
-- Handle virtual environment activation
-- Pass through command line arguments properly
-- Provide clear success/failure feedback
-
-### Installation Scripts
-
-For installation scripts like `install.ps1`:
-
-- Check for required dependencies before starting
-- Provide progress indicators for long-running operations
-- Handle both fresh installs and updates
-- Give clear next steps after completion
-
-### Output Formatting
-
-- Use emoji or symbols for visual feedback: ✅ ❌ ⚠️ 🚀 📦 etc.
-- Provide colored output when supported
-- Include progress indicators for long operations
-- Be consistent with messaging style across scripts
-
-Example:
+Handle different package managers gracefully:
 
 ```powershell
-Write-Host "🚀 Starting installation process..."
-Write-Host "📦 Installing dependencies..." -ForegroundColor Blue
-Write-Host "✅ Installation completed successfully!" -ForegroundColor Green
-```
+function Install-CrossPlatformTool {
+    param([string]$ToolName)
 
-## Testing PowerShell Scripts
-
-### Script Testing
-
-- Create corresponding test files in `tests/` directory
-- Test both success and failure scenarios
-- Mock external dependencies when possible
-- Test on multiple platforms if available
-
-Example test structure:
-
-```powershell
-# tests/test_module.ps1
-Describe "ModuleName Tests" {
-    BeforeAll {
-        Import-Module "$PSScriptRoot/../scripts/ModuleName.psm1" -Force
-    }
-
-    Context "Function Tests" {
-        It "Should return expected result for valid input" {
-            $result = Get-SomethingUseful -InputValue "test"
-            $result | Should -Be "expected_value"
+    if ($IsWindows) {
+        if (Get-Command choco -ErrorAction SilentlyContinue) {
+            choco install $ToolName -y
+        } elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
+            scoop install $ToolName
+        } else {
+            Write-Warning "Please install Chocolatey or Scoop package manager"
         }
-
-        It "Should throw error for invalid input" {
-            { Get-SomethingUseful -InputValue "" } | Should -Throw
+    } elseif ($IsMacOS) {
+        if (Get-Command brew -ErrorAction SilentlyContinue) {
+            brew install $ToolName
+        } else {
+            Write-Warning "Please install Homebrew package manager"
+        }
+    } elseif ($IsLinux) {
+        if (Get-Command apt-get -ErrorAction SilentlyContinue) {
+            sudo apt-get install -y $ToolName
+        } elseif (Get-Command yum -ErrorAction SilentlyContinue) {
+            sudo yum install -y $ToolName
+        } elseif (Get-Command pacman -ErrorAction SilentlyContinue) {
+            sudo pacman -S $ToolName
+        } else {
+            Write-Warning "Unsupported Linux distribution package manager"
         }
     }
 }
 ```
 
-### Manual Testing
+## Environment Configuration
 
-- Test scripts manually on different platforms when possible
-- Verify error handling works as expected
-- Check that all dependencies are properly detected
-- Ensure cleanup happens correctly on script termination
+### Node.js/npm Integration
 
-## Performance & Best Practices
-
-### Efficiency
-
-- Use pipeline operations where appropriate
-- Avoid unnecessary loops and object creation
-- Cache expensive operations when possible
-- Use appropriate PowerShell constructs (`Where-Object`, `ForEach-Object`, etc.)
-
-### Security
-
-- Validate all input parameters
-- Use `-WhatIf` and `-Confirm` for destructive operations when appropriate
-- Avoid `Invoke-Expression` with user input
-- Be cautious with file permissions and execution policies
-
-### Maintainability
-
-- Use clear, descriptive function and variable names
-- Keep functions focused on single responsibilities
-- Document complex logic with comments
-- Use consistent formatting throughout scripts
-
-## Integration with AI Tools
-
-### AI-Friendly Code
-
-- Write self-documenting code with clear intent
-- Use meaningful variable names that describe their purpose
-- Structure scripts in logical, predictable ways
-- Include comprehensive help documentation
-
-### Configuration Integration
-
-- Follow established patterns for loading configuration from YAML files
-- Respect environment variables for sensitive settings
-- Provide sensible defaults for optional configurations
-- Handle missing or invalid configuration gracefully
-
-## Quality Check Integration
-
-### Automated Quality Tools
-
-This project includes automated quality check modules:
+For tools requiring Node.js (like markdownlint):
 
 ```powershell
-# Install quality tools automatically
-Import-Module ./scripts/powershell/Install-QualityTools.psm1
-Install-AllQualityTools
+function Test-NodeJsAvailability {
+    $npmAvailable = Get-Command npm -ErrorAction SilentlyContinue
+    $npxAvailable = Get-Command npx -ErrorAction SilentlyContinue
 
-# Run comprehensive quality checks
-Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-Invoke-AllQualityChecks
+    if (-not $npmAvailable) {
+        Write-Warning "npm not found. Please install Node.js from https://nodejs.org/"
+        return $false
+    }
 
-# Test specific script types
-Test-PowerShellScripts -Path "scripts/" -Recurse
-Test-ShellScripts -Path "scripts/shell/" -Recurse
-Test-YAMLFiles -Path "configs/" -Recurse
+    if (-not $npxAvailable) {
+        Write-Warning "npx not found. Please update Node.js to a version that includes npx"
+        return $false
+    }
+
+    return $true
+}
 ```
 
-### Quality Standards
+### PowerShell Module Dependencies
 
-All PowerShell scripts should:
-
-- Pass PSScriptAnalyzer without warnings
-- Follow consistent error handling patterns
-- Include proper parameter validation
-- Use appropriate output formatting with emoji/symbols
-- Handle cross-platform differences gracefully
-
-### Module Development Pattern
-
-When creating new PowerShell modules:
-
-1. **Follow the established naming pattern**: `Verb-Noun.psm1`
-2. **Include comprehensive help documentation** with examples
-3. **Implement proper error handling** with try/catch blocks
-4. **Add parameter validation** with appropriate attributes
-5. **Export functions explicitly** using `Export-ModuleMember`
-6. **Test cross-platform compatibility** where possible
-
-Example quality-compliant module structure:
+Ensure PowerShell modules are available across platforms:
 
 ```powershell
-<#
-.SYNOPSIS
-    Module for [specific functionality]
+function Install-RequiredModule {
+    param([string]$ModuleName, [string]$MinimumVersion = $null)
 
-.DESCRIPTION
-    Detailed description of module capabilities and use cases
+    if (-not (Get-Module -ListAvailable -Name $ModuleName)) {
+        Write-Host "📦 Installing $ModuleName module..." -ForegroundColor Blue
 
-.EXAMPLE
-    Import-Module ./path/to/Module.psm1
-    Use-ModuleFunction -Parameter "value"
-#>
+        # Trust PSGallery if needed
+        if ((Get-PSRepository -Name PSGallery).InstallationPolicy -ne 'Trusted') {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+        }
 
+        $installParams = @{
+            Name = $ModuleName
+            Scope = 'CurrentUser'
+            Force = $true
+            AllowClobber = $true
+            Confirm = $false
+        }
+
+        if ($MinimumVersion) {
+            $installParams.MinimumVersion = $MinimumVersion
+        }
+
+        Install-Module @installParams
+        Write-Host "✅ $ModuleName installed successfully" -ForegroundColor Green
+    }
+}
+```
+
+## Output and User Experience
+
+### Consistent Output Formatting
+
+Use standard symbols and colors across all scripts:
+
+```powershell
+# Status indicators
+Write-Host "🚀 Starting process..." -ForegroundColor Cyan
+Write-Host "📦 Installing component..." -ForegroundColor Blue
+Write-Host "🔍 Checking configuration..." -ForegroundColor Blue
+Write-Host "✅ Operation completed successfully" -ForegroundColor Green
+Write-Host "⚠️ Warning: Check configuration" -ForegroundColor Yellow
+Write-Host "❌ Operation failed" -ForegroundColor Red
+Write-Host "ℹ️ Information: Process skipped" -ForegroundColor Gray
+```
+
+### Progress Indication
+
+For long-running operations:
+
+```powershell
+function Show-Progress {
+    param(
+        [string]$Activity,
+        [string]$Status,
+        [int]$PercentComplete
+    )
+
+    Write-Progress -Activity $Activity -Status $Status -PercentComplete $PercentComplete
+}
+
+# Usage
+$steps = @("Step 1", "Step 2", "Step 3")
+for ($i = 0; $i -lt $steps.Count; $i++) {
+    $percentComplete = [math]::Round(($i / $steps.Count) * 100)
+    Show-Progress -Activity "Processing" -Status $steps[$i] -PercentComplete $percentComplete
+
+    # Perform step work
+    Start-Sleep -Seconds 1
+}
+```
+
+## Error Handling Standards
+
+### Consistent Error Handling
+
+```powershell
+# Set consistent error behavior
 $ErrorActionPreference = "Stop"
 
-function Use-ModuleFunction {
-    <#
-    .SYNOPSIS
-        Brief function description
-
-    .PARAMETER InputValue
-        Description of parameter and its usage
-
-    .EXAMPLE
-        Use-ModuleFunction -InputValue "test"
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$InputValue
-    )
+function Invoke-SafeOperation {
+    param([string]$FilePath)
 
     try {
-        Write-Host "🔄 Processing: $InputValue" -ForegroundColor Blue
+        # Validate inputs
+        if (-not (Test-Path $FilePath)) {
+            throw "File not found: $FilePath"
+        }
 
-        # Implementation logic here
-        $result = "processed-$InputValue"
-
-        Write-Host "✅ Processing completed successfully" -ForegroundColor Green
+        # Perform operation
+        $result = Get-Content $FilePath
+        Write-Host "✅ File processed successfully" -ForegroundColor Green
         return $result
     }
     catch {
-        Write-Error "❌ Processing failed: $($_.Exception.Message)"
-        throw
+        Write-Host "❌ Failed to process file: $($_.Exception.Message)" -ForegroundColor Red
+        throw  # Re-throw to maintain error chain
+    }
+    finally {
+        # Cleanup operations
+        Write-Progress -Completed
     }
 }
-
-Export-ModuleMember -Function Use-ModuleFunction
 ```
+
+## Quality Integration
+
+### Automated Quality Checks
+
+This project includes comprehensive quality checking. All PowerShell code should integrate with:
+
+```powershell
+# Install all quality tools (no sudo required)
+Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Install-AllQualityTools
+
+# Run all quality checks
+Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
+$allPassed = Invoke-AllQualityChecks -Path "." -ExitOnFailure
+```
+
+### Quality Standards Summary
+
+All PowerShell code must:
+
+1. **Pass PSScriptAnalyzer** without warnings
+2. **Use cross-platform compatible syntax** only
+3. **Include comprehensive help documentation**
+4. **Implement proper error handling** with try/catch blocks
+5. **Use consistent output formatting** with emojis and colors
+6. **Handle dependencies gracefully** with availability checks
+7. **Follow established naming conventions** (Verb-Noun patterns)
+
+## Integration Patterns
+
+### Configuration Loading
+
+Standard pattern for YAML configuration loading:
+
+```powershell
+function Get-ProjectConfig {
+    param([string]$ConfigName = "default")
+
+    $configPath = Join-Path $PSScriptRoot "../../../configs/$ConfigName.yaml"
+
+    if (-not (Test-Path $configPath)) {
+        throw "Configuration file not found: $configPath"
+    }
+
+    # Use yq if available, fallback to PowerShell-Yaml
+    if (Get-Command yq -ErrorAction SilentlyContinue) {
+        $yamlContent = & yq eval '.' $configPath | ConvertFrom-Json
+    } else {
+        Install-RequiredModule -ModuleName "powershell-yaml"
+        $yamlContent = Get-Content $configPath -Raw | ConvertFrom-Yaml
+    }
+
+    return $yamlContent
+}
+```
+
+### Module Import Pattern
+
+Consistent module loading across the project:
+
+```powershell
+function Import-ProjectModule {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ModuleName,
+
+        [switch]$Force
+    )
+
+    $modulePath = Join-Path $PSScriptRoot "../powershell/$ModuleName.psm1"
+
+    if (-not (Test-Path $modulePath)) {
+        throw "Module not found: $modulePath"
+    }
+
+    Import-Module $modulePath -Force:$Force
+    Write-Host "✅ Imported module: $ModuleName" -ForegroundColor Green
+}
+
+# Usage
+Import-ProjectModule -ModuleName "Install-QualityTools" -Force
+Import-ProjectModule -ModuleName "Invoke-QualityChecks"
+```
+
+This file focuses on cross-platform compatibility and integration patterns.
+Refer to the specialized instruction files for detailed guidance on specific PowerShell file types.

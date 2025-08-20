@@ -34,48 +34,57 @@ Edit `.env` and add your:
 - `CLAUDE_API_KEY` - Get from [Anthropic Console](https://console.anthropic.com/)
 - `GEMINI_API_KEY` - Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-### 2. Install Quality Check Tools (Automatic)
+### 2. Install Quality Check Tools (Automated)
 
-The installation script will automatically install:
-
-```powershell
-# PowerShell Script Analyzer (cross-platform)
-Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
-
-# shellcheck for shell script validation
-# Installed automatically based on your platform:
-# - macOS: via Homebrew
-# - Linux: via apt/yum/dnf
-# - Windows: via Scoop or Chocolatey
-
-# yq for YAML validation
-# Installed automatically based on your platform
-```
-
-Or install manually using our PowerShell module:
+The installation script automatically installs all quality tools using our cross-platform PowerShell modules:
 
 ```powershell
+# Using our automated installation module (recommended)
 Import-Module ./scripts/powershell/Install-QualityTools.psm1
-Install-AllQualityTools
+Install-AllQualityTools -Force
+
+# This automatically installs:
+# - PSScriptAnalyzer: PowerShell script analysis (cross-platform)
+# - shellcheck: Shell script validation (via system package manager)
+# - yq: YAML validation and processing (downloaded binary)
+# - markdownlint-cli: Markdown linting (via npx, no global install needed)
 ```
+
+**Platform-specific installation methods:**
+
+- **macOS**: Homebrew for shellcheck, direct download for yq
+- **Linux**: apt/yum/dnf for shellcheck, direct download for yq
+- **Windows**: Scoop/Chocolatey fallback, PowerShell Gallery for PSScriptAnalyzer
+- **All platforms**: npx for markdownlint (no sudo required)
 
 ## Development Workflow
 
-### Code Quality
+### Code Quality (Automated)
+
+Our project uses automated PowerShell modules for comprehensive quality checks:
 
 ```powershell
-# Run all quality checks using our automated module
+# Run all quality checks using our automated module (recommended)
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-Invoke-AllQualityChecks
+Invoke-AllQualityChecks -Path . -ExitOnFailure
 
-# Run specific checks
+# Run specific file type checks
 Test-PowerShellScripts -Path "scripts/" -Recurse
 Test-ShellScripts -Path "scripts/shell/" -Recurse
 Test-YAMLFiles -Path "configs/" -Recurse
+Test-MarkdownFiles -Path "." -Recurse
 
-# Apply automatic fixes where possible
-Invoke-QuickFixes
+# Quick verification that all tools are working
+Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Test-QualityToolsInstallation
 ```
+
+**Key Features:**
+
+- **Dependency Checking**: Automatically validates npm/npx availability before running markdownlint
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Comprehensive**: Covers PowerShell, Shell, YAML, and Markdown files
+- **CI Integration**: Same modules used in GitHub Actions workflow
 
 ### Manual Quality Checks
 
@@ -100,18 +109,29 @@ yq validate configs/*.yaml
 
 ### GitHub Actions (Automated CI)
 
-Quality checks run automatically on every push and pull request via GitHub Actions:
+Quality checks run automatically on every push and pull request using our automated PowerShell modules:
+
+**Workflow Features:**
+
+- **Automated Tool Installation**: Uses `Install-QualityTools.psm1` to install all necessary tools
+- **Comprehensive Analysis**: Runs `Invoke-QualityChecks.psm1` for complete code validation
+- **Dependency Validation**: Ensures npm/npx availability before running markdownlint
+- **Cross-Platform**: Executes on Ubuntu with PowerShell 7.0+
+
+**Quality Checks Performed:**
 
 - **PowerShell Analysis**: PSScriptAnalyzer checks all `.ps1`, `.psm1`, and `.psd1` files
 - **Shell Script Validation**: shellcheck validates all `.sh`, `.bash`, and `.zsh` files
 - **YAML Validation**: yq validates all `.yaml` and `.yml` configuration files
+- **Markdown Linting**: markdownlint-cli via npx checks all `.md` files
 
-The CI workflow is defined in `.github/workflows/quality-checks.yml` and will:
+The CI workflow in `.github/workflows/quality-checks.yml` will:
 
-1. Install all necessary quality tools
-2. Run comprehensive analysis on your code
-3. Report any issues that need to be fixed
-4. Block merges if critical issues are found
+1. Install PowerShell on Ubuntu runner
+2. Set up Node.js for npm/npx tools
+3. Use our automated modules to install all quality tools
+4. Run comprehensive analysis using the same modules developers use locally
+5. Report detailed results and block merges if critical issues are found
 
 ### Using AI Assistants
 

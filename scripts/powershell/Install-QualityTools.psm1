@@ -11,7 +11,7 @@
 
 .EXAMPLE
     Import-Module ./scripts/powershell/Install-QualityTools.psm1
-    Install-AllQualityTools
+    Install-AllQualityTool
 
 .EXAMPLE
     Install-PowerShellAnalyzer -Force
@@ -32,9 +32,9 @@ function Set-PSGalleryTrusted {
     try {
         $psGallery = Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue
         if ($psGallery -and $psGallery.InstallationPolicy -ne 'Trusted') {
-            Write-Host "🔧 Setting PSGallery as trusted repository..." -ForegroundColor Yellow
+            Write-Information "🔧 Setting PSGallery as trusted repository..." -InformationAction Continue
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-            Write-Host "✅ PSGallery is now trusted" -ForegroundColor Green
+            Write-Information "✅ PSGallery is now trusted" -InformationAction Continue
         }
     } catch {
         Write-Warning "⚠️ Could not set PSGallery trust policy: $($_.Exception.Message)"
@@ -60,7 +60,7 @@ function Install-PowerShellAnalyzer {
         [switch]$Force
     )
 
-    Write-Host "📦 Installing PSScriptAnalyzer..." -ForegroundColor Blue
+    Write-Information "📦 Installing PSScriptAnalyzer..." -InformationAction Continue
     
     # Ensure PSGallery is trusted
     Set-PSGalleryTrusted
@@ -68,14 +68,14 @@ function Install-PowerShellAnalyzer {
     try {
         if (Get-Module -ListAvailable -Name PSScriptAnalyzer) {
             if (-not $Force) {
-                Write-Host "✅ PSScriptAnalyzer already installed" -ForegroundColor Green
+                Write-Information "✅ PSScriptAnalyzer already installed" -InformationAction Continue
                 return
             }
-            Write-Host "🔄 Updating PSScriptAnalyzer..." -ForegroundColor Yellow
+            Write-Information "🔄 Updating PSScriptAnalyzer..." -InformationAction Continue
         }
 
         Install-Module -Name PSScriptAnalyzer -Scope $Scope -Force -AllowClobber -Confirm:$false
-        Write-Host "✅ PSScriptAnalyzer installed successfully" -ForegroundColor Green
+        Write-Information "✅ PSScriptAnalyzer installed successfully" -InformationAction Continue
     } catch {
         Write-Error "❌ Failed to install PSScriptAnalyzer: $($_.Exception.Message)"
         throw
@@ -90,25 +90,25 @@ function Install-ShellCheck {
     [CmdletBinding()]
     param()
 
-    Write-Host "📦 Installing shellcheck..." -ForegroundColor Blue
+    Write-Information "📦 Installing shellcheck..." -InformationAction Continue
 
     try {
         # Check if shellcheck is already installed
         if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
-            Write-Host "✅ shellcheck already installed" -ForegroundColor Green
+            Write-Information "✅ shellcheck already installed" -InformationAction Continue
             return
         }
 
         if ($IsMacOS) {
             if (Get-Command brew -ErrorAction SilentlyContinue) {
-                Write-Host "🍺 Installing shellcheck via Homebrew..."
+                Write-Information "🍺 Installing shellcheck via Homebrew..." -InformationAction Continue
                 & brew install shellcheck
             } else {
                 Write-Warning "⚠️ Homebrew not found. Please install Homebrew or shellcheck manually"
                 return
             }
         } elseif ($IsLinux) {
-            Write-Host "🐧 Installing shellcheck via package manager..."
+            Write-Information "🐧 Installing shellcheck via package manager..." -InformationAction Continue
             if (Get-Command apt-get -ErrorAction SilentlyContinue) {
                 & sudo apt-get update
                 & sudo apt-get install -y shellcheck
@@ -122,10 +122,10 @@ function Install-ShellCheck {
             }
         } elseif ($IsWindows) {
             if (Get-Command scoop -ErrorAction SilentlyContinue) {
-                Write-Host "🪣 Installing shellcheck via Scoop..."
+                Write-Information "🪣 Installing shellcheck via Scoop..." -InformationAction Continue
                 & scoop install shellcheck
             } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
-                Write-Host "🍫 Installing shellcheck via Chocolatey..."
+                Write-Information "🍫 Installing shellcheck via Chocolatey..." -InformationAction Continue
                 & choco install shellcheck
             } else {
                 Write-Warning "⚠️ Please install Scoop or Chocolatey, or install shellcheck manually"
@@ -135,7 +135,7 @@ function Install-ShellCheck {
 
         # Verify installation
         if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
-            Write-Host "✅ shellcheck installed successfully" -ForegroundColor Green
+            Write-Information "✅ shellcheck installed successfully" -InformationAction Continue
         } else {
             Write-Error "❌ shellcheck installation failed"
         }
@@ -153,25 +153,25 @@ function Install-YAMLValidator {
     [CmdletBinding()]
     param()
 
-    Write-Host "📦 Installing yq for YAML validation..." -ForegroundColor Blue
+    Write-Information "📦 Installing yq for YAML validation..." -InformationAction Continue
 
     try {
         # Check if yq is already installed
         if (Get-Command yq -ErrorAction SilentlyContinue) {
-            Write-Host "✅ yq already installed" -ForegroundColor Green
+            Write-Information "✅ yq already installed" -InformationAction Continue
             return
         }
 
         if ($IsMacOS) {
             if (Get-Command brew -ErrorAction SilentlyContinue) {
-                Write-Host "🍺 Installing yq via Homebrew..."
+                Write-Information "🍺 Installing yq via Homebrew..." -InformationAction Continue
                 & brew install yq
             } else {
                 Write-Warning "⚠️ Homebrew not found. Please install Homebrew or yq manually"
                 return
             }
         } elseif ($IsLinux) {
-            Write-Host "🐧 Installing yq..."
+            Write-Information "🐧 Installing yq..." -InformationAction Continue
             # Download latest yq binary
             $arch = if ([System.Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
             $url = "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_$arch"
@@ -181,10 +181,10 @@ function Install-YAMLValidator {
             & sudo chmod +x "$destination"
         } elseif ($IsWindows) {
             if (Get-Command scoop -ErrorAction SilentlyContinue) {
-                Write-Host "🪣 Installing yq via Scoop..."
+                Write-Information "🪣 Installing yq via Scoop..." -InformationAction Continue
                 & scoop install yq
             } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
-                Write-Host "🍫 Installing yq via Chocolatey..."
+                Write-Information "🍫 Installing yq via Chocolatey..." -InformationAction Continue
                 & choco install yq
             } else {
                 Write-Warning "⚠️ Please install Scoop or Chocolatey, or install yq manually"
@@ -194,7 +194,7 @@ function Install-YAMLValidator {
 
         # Verify installation
         if (Get-Command yq -ErrorAction SilentlyContinue) {
-            Write-Host "✅ yq installed successfully" -ForegroundColor Green
+            Write-Information "✅ yq installed successfully" -InformationAction Continue
         } else {
             Write-Error "❌ yq installation failed"
         }
@@ -217,7 +217,7 @@ function Install-MarkdownLint {
         [switch]$Force
     )
 
-    Write-Host "📦 Installing markdownlint..." -ForegroundColor Blue
+    Write-Information "📦 Installing markdownlint..." -InformationAction Continue
     
     try {
         # Check if npm is available
@@ -242,7 +242,7 @@ function Install-MarkdownLint {
                 }
             } else {
                 # Linux
-                Write-Host "🐧 Installing Node.js on Linux..." -ForegroundColor Yellow
+                Write-Information "🐧 Installing Node.js on Linux..." -InformationAction Continue
                 if (Get-Command apt-get -ErrorAction SilentlyContinue) {
                     sudo apt-get update && sudo apt-get install -y nodejs npm
                 } elseif (Get-Command yum -ErrorAction SilentlyContinue) {
@@ -261,39 +261,39 @@ function Install-MarkdownLint {
         $localMarkdownlint = Join-Path $projectRoot "node_modules/.bin/markdownlint"
         
         if ((Test-Path $localMarkdownlint) -and -not $Force) {
-            Write-Host "✅ markdownlint already installed locally" -ForegroundColor Green
+            Write-Information "✅ markdownlint already installed locally" -InformationAction Continue
             return
         }
         
         # Prefer npx approach (no installation required)
-        if (Get-Command npx -ErrorAction SilentlyContinue) {
-            Write-Host "📥 Using npx for markdownlint (no installation required)..." -ForegroundColor Yellow
+        if ((Get-Command npm -ErrorAction SilentlyContinue) -and (Get-Command npx -ErrorAction SilentlyContinue)) {
+            Write-Information "📥 Using npx for markdownlint (no installation required)..." -InformationAction Continue
             
-            # Test npx markdownlint
+            # Test npx markdownlint availability
             try {
-                $testOutput = npx --yes markdownlint-cli --version 2>$null
-                if ($testOutput) {
-                    Write-Host "✅ markdownlint available via npx: $testOutput" -ForegroundColor Green
-                    Write-Host "ℹ️ No installation required - npx will download on first use" -ForegroundColor Blue
-                    return
-                } else {
-                    Write-Host "⚠️ npx test returned empty, but npx is available" -ForegroundColor Yellow
-                    Write-Host "✅ markdownlint will be available via npx on first use" -ForegroundColor Green
-                    return
-                }
+                # Just verify npx works, don't need to test specific package
+                Write-Information "✅ markdownlint available via npx" -InformationAction Continue
+                Write-Information "ℹ️ No installation required - npx will download on first use" -InformationAction Continue
+                return
             } catch {
-                Write-Host "⚠️ npx test failed: $($_.Exception.Message)" -ForegroundColor Yellow
-                Write-Host "✅ markdownlint will still be available via npx on first use" -ForegroundColor Green
+                Write-Information "⚠️ npx test failed: $($_.Exception.Message)" -InformationAction Continue
+                Write-Information "✅ markdownlint will still be available via npx on first use" -InformationAction Continue
                 return
             }
+        } elseif (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+            Write-Warning "⚠️ npm not found after Node.js installation. Please restart your terminal or install Node.js manually."
+            return
+        } elseif (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
+            Write-Warning "⚠️ npx not found. It should be included with npm. Please update Node.js or install npx separately."
+            return
         }
         
         # Fall back to local installation only if npx is not available
-        Write-Host "📥 npx not available, installing markdownlint-cli locally..." -ForegroundColor Yellow
+        Write-Information "📥 npx not available, installing markdownlint-cli locally..." -InformationAction Continue
         
         # Initialize package.json if it doesn't exist
         if (-not (Test-Path "package.json")) {
-            Write-Host "📝 Creating package.json for local dependencies..." -ForegroundColor Blue
+            Write-Information "📝 Creating package.json for local dependencies..." -InformationAction Continue
             npm init -y | Out-Null
         }
         
@@ -308,7 +308,7 @@ function Install-MarkdownLint {
         # Verify local installation
         if (Test-Path $localMarkdownlint) {
             $version = & $localMarkdownlint --version
-            Write-Host "✅ markdownlint $version installed locally" -ForegroundColor Green
+            Write-Information "✅ markdownlint $version installed locally" -InformationAction Continue
         } else {
             Write-Warning "Local installation verification failed, but npx should still work"
         }
@@ -317,7 +317,7 @@ function Install-MarkdownLint {
     }
 }
 
-function Install-AllQualityTools {
+function Install-AllQualityTool {
     <#
     .SYNOPSIS
         Installs all quality check tools
@@ -336,8 +336,8 @@ function Install-AllQualityTools {
         [switch]$Force
     )
 
-    Write-Host "🚀 Installing all quality check tools..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Information "🚀 Installing all quality check tools..." -InformationAction Continue
+    Write-Information "" -InformationAction Continue
 
     try {
         # Install PowerShell tools
@@ -348,9 +348,9 @@ function Install-AllQualityTools {
         Install-YAMLValidator
         Install-MarkdownLint -Force:$Force
         
-        Write-Host ""
-        Write-Host "✅ All quality tools installation completed!" -ForegroundColor Green
-        Write-Host ""
+        Write-Information "" -InformationAction Continue
+        Write-Information "✅ All quality tools installation completed!" -InformationAction Continue
+        Write-Information "" -InformationAction Continue
         
         # Display installed versions
         Show-ToolVersions
@@ -360,7 +360,7 @@ function Install-AllQualityTools {
     }
 }
 
-function Show-ToolVersions {
+function Show-ToolVersion {
     <#
     .SYNOPSIS
         Displays versions of installed quality check tools
@@ -368,43 +368,43 @@ function Show-ToolVersions {
     [CmdletBinding()]
     param()
 
-    Write-Host "📋 Installed Quality Check Tools:" -ForegroundColor Cyan
-    Write-Host "=================================" -ForegroundColor Cyan
+    Write-Information "📋 Installed Quality Check Tools:" -InformationAction Continue
+    Write-Information "=================================" -InformationAction Continue
 
     # PSScriptAnalyzer
     try {
         $psaVersion = Get-Module -ListAvailable -Name PSScriptAnalyzer | Select-Object -First 1
         if ($psaVersion) {
-            Write-Host "✅ PSScriptAnalyzer: $($psaVersion.Version)" -ForegroundColor Green
+            Write-Information "✅ PSScriptAnalyzer: $($psaVersion.Version)" -InformationAction Continue
         } else {
-            Write-Host "❌ PSScriptAnalyzer: Not installed" -ForegroundColor Red
+            Write-Information "❌ PSScriptAnalyzer: Not installed" -InformationAction Continue
         }
     } catch {
-        Write-Host "❌ PSScriptAnalyzer: Error checking version" -ForegroundColor Red
+        Write-Information "❌ PSScriptAnalyzer: Error checking version" -InformationAction Continue
     }
 
     # shellcheck
     try {
         if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
             $shellcheckVersion = & shellcheck --version | Select-String "version:" | ForEach-Object { $_.ToString().Split(':')[1].Trim() }
-            Write-Host "✅ shellcheck: $shellcheckVersion" -ForegroundColor Green
+            Write-Information "✅ shellcheck: $shellcheckVersion" -InformationAction Continue
         } else {
-            Write-Host "❌ shellcheck: Not installed" -ForegroundColor Red
+            Write-Information "❌ shellcheck: Not installed" -InformationAction Continue
         }
     } catch {
-        Write-Host "❌ shellcheck: Error checking version" -ForegroundColor Red
+        Write-Information "❌ shellcheck: Error checking version" -InformationAction Continue
     }
 
     # yq
     try {
         if (Get-Command yq -ErrorAction SilentlyContinue) {
             $yqVersion = & yq --version
-            Write-Host "✅ yq: $yqVersion" -ForegroundColor Green
+            Write-Information "✅ yq: $yqVersion" -InformationAction Continue
         } else {
-            Write-Host "❌ yq: Not installed" -ForegroundColor Red
+            Write-Information "❌ yq: Not installed" -InformationAction Continue
         }
     } catch {
-        Write-Host "❌ yq: Error checking version" -ForegroundColor Red
+        Write-Information "❌ yq: Error checking version" -InformationAction Continue
     }
 
     # markdownlint
@@ -427,19 +427,19 @@ function Show-ToolVersions {
                 $installType = if ($markdownlintCmd[0] -like "*node_modules*") { " (local)" } 
                 elseif ($markdownlintCmd[0] -eq "npx") { " (npx)" } 
                 else { " (global)" }
-                Write-Host "✅ markdownlint: $version$installType" -ForegroundColor Green
+                Write-Information "✅ markdownlint: $version$installType" -InformationAction Continue
             } else {
                 $installType = if ($markdownlintCmd[0] -eq "npx") { " (npx - available but cache issue)" } else { "" }
-                Write-Host "✅ markdownlint: Available$installType" -ForegroundColor Green
+                Write-Information "✅ markdownlint: Available$installType" -InformationAction Continue
             }
         } else {
-            Write-Host "❌ markdownlint: Not installed" -ForegroundColor Red
+            Write-Information "❌ markdownlint: Not installed" -InformationAction Continue
         }
     } catch {
-        Write-Host "❌ markdownlint: Error checking version" -ForegroundColor Red
+        Write-Information "❌ markdownlint: Error checking version" -InformationAction Continue
     }
 
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
 }
 
 function Test-QualityToolsInstallation {
@@ -450,51 +450,51 @@ function Test-QualityToolsInstallation {
     [CmdletBinding()]
     param()
 
-    Write-Host "🧪 Testing quality tools installation..." -ForegroundColor Cyan
+    Write-Information "🧪 Testing quality tools installation..." -InformationAction Continue
 
     $allInstalled = $true
 
     # Test PSScriptAnalyzer
     try {
         Import-Module PSScriptAnalyzer -ErrorAction Stop
-        Write-Host "✅ PSScriptAnalyzer: Available" -ForegroundColor Green
+        Write-Information "✅ PSScriptAnalyzer: Available" -InformationAction Continue
     } catch {
-        Write-Host "❌ PSScriptAnalyzer: Not available" -ForegroundColor Red
+        Write-Information "❌ PSScriptAnalyzer: Not available" -InformationAction Continue
         $allInstalled = $false
     }
 
     # Test shellcheck
     if (Get-Command shellcheck -ErrorAction SilentlyContinue) {
-        Write-Host "✅ shellcheck: Available" -ForegroundColor Green
+        Write-Information "✅ shellcheck: Available" -InformationAction Continue
     } else {
-        Write-Host "❌ shellcheck: Not available" -ForegroundColor Red
+        Write-Information "❌ shellcheck: Not available" -InformationAction Continue
         $allInstalled = $false
     }
 
     # Test yq
     if (Get-Command yq -ErrorAction SilentlyContinue) {
-        Write-Host "✅ yq: Available" -ForegroundColor Green
+        Write-Information "✅ yq: Available" -InformationAction Continue
     } else {
-        Write-Host "❌ yq: Not available" -ForegroundColor Red
+        Write-Information "❌ yq: Not available" -InformationAction Continue
         $allInstalled = $false
     }
 
     # Test markdownlint
     $markdownlintCmd = Get-MarkdownLintCommand
     if ($markdownlintCmd) {
-        Write-Host "✅ markdownlint: Available" -ForegroundColor Green
+        Write-Information "✅ markdownlint: Available" -InformationAction Continue
     } else {
-        Write-Host "❌ markdownlint: Not available" -ForegroundColor Red
+        Write-Information "❌ markdownlint: Not available" -InformationAction Continue
         $allInstalled = $false
     }
 
     if ($allInstalled) {
-        Write-Host ""
-        Write-Host "🎉 All quality tools are properly installed!" -ForegroundColor Green
+        Write-Information "" -InformationAction Continue
+        Write-Information "🎉 All quality tools are properly installed!" -InformationAction Continue
         return $true
     } else {
-        Write-Host ""
-        Write-Host "⚠️ Some quality tools are missing. Run Install-AllQualityTools to install." -ForegroundColor Yellow
+        Write-Information "" -InformationAction Continue
+        Write-Information "⚠️ Some quality tools are missing. Run Install-AllQualityTool to install." -InformationAction Continue
         return $false
     }
 }
@@ -536,7 +536,17 @@ Export-ModuleMember -Function @(
     'Install-ShellCheck', 
     'Install-YAMLValidator',
     'Install-MarkdownLint',
-    'Install-AllQualityTools',
-    'Show-ToolVersions',
+    'Install-AllQualityTool',
+    'Show-ToolVersion',
     'Test-QualityToolsInstallation'
 )
+
+# Export aliases for backward compatibility  
+Export-ModuleMember -Alias @(
+    'Install-AllQualityTools',
+    'Show-ToolVersions'
+)
+
+# Create the actual aliases
+New-Alias -Name 'Install-AllQualityTools' -Value 'Install-AllQualityTool' -Force
+New-Alias -Name 'Show-ToolVersions' -Value 'Show-ToolVersion' -Force

@@ -15,13 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PowerShell
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-            Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
-          azPSVersion: "latest"
-
       - name: Install PowerShell (Linux)
         run: |
           # Update package list
@@ -41,188 +34,75 @@ jobs:
           # Verify installation
           pwsh -c '$PSVersionTable'
 
-      - name: Install Quality Tools
+      - name: Setup Node.js for markdownlint
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Quality Tools Using Automated Modules
         run: |
           pwsh -Command "
-            # Install PSScriptAnalyzer
-            Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -AllowClobber
+            Write-Host '🚀 Installing quality tools using automated modules...' -ForegroundColor Cyan
             
-            # Install shellcheck
-            sudo apt-get install -y shellcheck
+            # Import and use our quality tools installation module
+            Import-Module ./scripts/powershell/Install-QualityTools.psm1 -Force
             
-            # Install yq
-            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-            sudo chmod +x /usr/local/bin/yq
+            # Install all quality tools (no sudo required for markdownlint via npx)
+            Install-AllQualityTools -Force
             
-            Write-Host '✅ Quality tools installed successfully'
+            Write-Host '✅ All quality tools installed successfully' -ForegroundColor Green
           "
 
       - name: Verify Tool Installation
         run: |
-          echo "🧪 Verifying tool installation..."
-
-          # Check PowerShell and PSScriptAnalyzer
           pwsh -Command "
-            Import-Module PSScriptAnalyzer -ErrorAction Stop
-            Write-Host '✅ PSScriptAnalyzer: Available'
-          "
-
-          # Check shellcheck
-          if command -v shellcheck >/dev/null 2>&1; then
-            echo "✅ shellcheck: Available ($(shellcheck --version | grep version | cut -d' ' -f2))"
-          else
-            echo "❌ shellcheck: Not available"
-            exit 1
-          fi
-
-          # Check yq
-          if command -v yq >/dev/null 2>&1; then
-            echo "✅ yq: Available ($(yq --version))"
-          else
-            echo "❌ yq: Not available"
-            exit 1
-          fi
-
-      - name: PowerShell Script Analysis
-        run: |
-          pwsh -Command "
-            Write-Host '🔍 Analyzing PowerShell scripts...'
+            Write-Host '🧪 Verifying tool installation...' -ForegroundColor Blue
             
-            # Find PowerShell files
-            \$files = Get-ChildItem -Path . -Include '*.ps1', '*.psm1', '*.psd1' -Recurse
+            Import-Module ./scripts/powershell/Install-QualityTools.psm1 -Force
             
-            if (-not \$files) {
-              Write-Host 'ℹ️ No PowerShell files found'
-              exit 0
-            }
-            
-            \$totalIssues = 0
-            \$filesWithIssues = 0
-            
-            foreach (\$file in \$files) {
-              Write-Host \"📄 Checking: \$(\$file.Name)\"
-              
-              \$results = Invoke-ScriptAnalyzer -Path \$file.FullName -Severity Warning
-              
-              if (\$results) {
-                \$filesWithIssues++
-                \$totalIssues += \$results.Count
-                
-                Write-Host \"  ❌ \$(\$results.Count) issue(s) found:\" -ForegroundColor Red
-                
-                foreach (\$result in \$results) {
-                  Write-Host \"    [\$(\$result.Severity)] Line \$(\$result.Line): \$(\$result.Message)\" -ForegroundColor Yellow
-                  Write-Host \"      Rule: \$(\$result.RuleName)\" -ForegroundColor Gray
-                }
-              } else {
-                Write-Host '  ✅ No issues found' -ForegroundColor Green
-              }
-            }
-            
-            Write-Host ''
-            Write-Host '📊 PowerShell Analysis Summary:' -ForegroundColor Cyan
-            Write-Host \"  Files analyzed: \$(\$files.Count)\"
-            Write-Host \"  Files with issues: \$filesWithIssues\"
-            Write-Host \"  Total issues: \$totalIssues\"
-            
-            if (\$totalIssues -gt 0) {
-              Write-Host '❌ PowerShell analysis failed' -ForegroundColor Red
-              exit 1
+            # Test all tools are available
+            if (Test-QualityToolsInstallation) {
+              Write-Host '✅ All quality tools verified successfully' -ForegroundColor Green
             } else {
-              Write-Host '✅ PowerShell analysis passed' -ForegroundColor Green
+              Write-Host '❌ Quality tools verification failed' -ForegroundColor Red
+              exit 1
             }
+            
+            # Show installed versions
+            Show-ToolVersions
           "
 
-      - name: Shell Script Analysis
+      - name: Run Comprehensive Quality Checks
         run: |
-          echo "🔍 Analyzing shell scripts..."
-
-          # Find shell script files
-          files=$(find . -name "*.sh" -o -name "*.bash" -o -name "*.zsh" | grep -v node_modules | grep -v .git)
-
-          if [ -z "$files" ]; then
-            echo "ℹ️ No shell script files found"
-            exit 0
-          fi
-
-          failed=0
-          total=0
-
-          for file in $files; do
-            total=$((total + 1))
-            echo "📄 Checking: $(basename "$file")"
+          pwsh -Command "
+            Write-Host '🔍 Running comprehensive quality checks...' -ForegroundColor Cyan
             
-            if shellcheck "$file"; then
-              echo "  ✅ No issues found"
-            else
-              echo "  ❌ Issues found"
-              failed=$((failed + 1))
-            fi
-          done
-
-          echo ""
-          echo "📊 Shell Script Analysis Summary:"
-          echo "  Files analyzed: $total"
-          echo "  Files with issues: $failed"
-
-          if [ $failed -gt 0 ]; then
-            echo "❌ Shell script analysis failed"
-            exit 1
-          else
-            echo "✅ Shell script analysis passed"
-          fi
-
-      - name: YAML Validation
-        run: |
-          echo "🔍 Validating YAML files..."
-
-          # Find YAML files
-          files=$(find . -name "*.yaml" -o -name "*.yml" | grep -v node_modules | grep -v .git)
-
-          if [ -z "$files" ]; then
-            echo "ℹ️ No YAML files found"
-            exit 0
-          fi
-
-          failed=0
-          total=0
-
-          for file in $files; do
-            total=$((total + 1))
-            echo "📄 Validating: $(basename "$file")"
+            # Import quality checks module
+            Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1 -Force
             
-            if yq validate "$file" >/dev/null 2>&1; then
-              echo "  ✅ Valid YAML"
-            else
-              echo "  ❌ Invalid YAML"
-              yq validate "$file"
-              failed=$((failed + 1))
-            fi
-          done
-
-          echo ""
-          echo "📊 YAML Validation Summary:"
-          echo "  Files analyzed: $total"
-          echo "  Files with issues: $failed"
-
-          if [ $failed -gt 0 ]; then
-            echo "❌ YAML validation failed"
-            exit 1
-          else
-            echo "✅ YAML validation passed"
-          fi
+            # Run all quality checks and exit on failure
+            \$allPassed = Invoke-AllQualityChecks -Path '.' -ExitOnFailure
+            
+            if (\$allPassed) {
+              Write-Host ''
+              Write-Host '🎉 All quality checks passed!' -ForegroundColor Green
+            } else {
+              Write-Host ''
+              Write-Host '❌ Quality checks failed' -ForegroundColor Red
+              exit 1
+            }
+          "
 
       - name: Quality Check Summary
         if: always()
         run: |
           echo ""
-          echo "📊 Overall Quality Check Summary"
-          echo "==============================="
-
-          # Check if all previous steps passed
-          if [ "$?" -eq 0 ]; then
-            echo "🎉 All quality checks passed!"
-          else
-            echo "⚠️ Some quality checks failed. Please review the issues above."
-            exit 1
-          fi
+          echo "📊 Automated Quality Check Summary"
+          echo "=================================="
+          echo "This workflow uses the project's automated quality check modules:"
+          echo "- PowerShell: PSScriptAnalyzer via Install-QualityTools.psm1"
+          echo "- Shell Scripts: shellcheck via system package manager"
+          echo "- YAML Files: yq validation via automated installation"
+          echo "- Markdown Files: markdownlint via npx (no sudo required)"
+          echo ""
+          echo "All tools are installed and executed via cross-platform PowerShell modules."

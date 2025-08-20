@@ -12,10 +12,11 @@ Export-ModuleMember -Function `
 # --------------------------------------------------------------------------
 # > GLOBAL VARIABLES (created once when module loads – kept internal)
 # --------------------------------------------------------------------------
-$Global:PXM_LogFile = $null        # set at runtime by entry script
-$Global:PXM_LogLevel = 'Info'
-$Global:PXM_DryRun = $false
-$Global:PXM_SSHUser = 'root'
+# Module-scoped variables - avoiding global scope
+$script:PXM_LogFile = ""
+$script:PXM_LogLevel = "Info"
+$script:PXM_DryRun = $false
+$script:PXM_SSHUser = "root"
 
 # --------------------------------------------------------------------------
 function Write-LogMessage {
@@ -40,14 +41,8 @@ function Write-LogMessage {
     $ts = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
     $text = "[$Level] $ts  $Message"
 
-    # console colour
-    switch ($Level) {
-        'Info' { $fg = 'Green' }
-        'Warning' { $fg = 'Yellow' }
-        'Error' { $fg = 'Red' }
-        'Debug' { $fg = 'Cyan' }
-    }
-    Write-Host $text -ForegroundColor $fg
+    # Write to console and log file
+    Write-Information $text -InformationAction Continue
 
     if ($PXM_LogFile) { Add-Content -Path $PXM_LogFile -Value $text }
 }
@@ -97,17 +92,18 @@ function Test-SSHConnection {
 }
 
 # --------------------------------------------------------------------------
-function Stop-AllVMsAndContainers {
+function Stop-AllVMAndContainer {
     <#
 .SYNOPSIS
     Gracefully stops every running VM & LXC on all standalone nodes.
     Produces CSV report under $ReportsDir.
 #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][hashtable]$Nodes,
-        [Parameter(Mandatory)][string]    $ReportsDir
-    )
+    [CmdletBinding(SupportsShouldProcess)]
+    param()
+
+    if (-not $PSCmdlet.ShouldProcess("All VMs and Containers", "Stop")) {
+        return
+    }
 
     Write-LogMessage Info "Shutting down VMs/LXCs on ${($Nodes.Keys -join ', ')}"
 
@@ -128,7 +124,7 @@ function Stop-AllVMsAndContainers {
             $vms = $vmRaw | ConvertFrom-Json
             foreach ($vm in $vms) {
                 if ($vm.status -ne 'running') { continue }
-                Shutdown-RemoteGuest -Session $sess -Type 'VM' -Id $vm.vmid -Name $vm.name -Csv $csv -Node $nk
+                Stop-RemoteGuest -Session $sess -Type 'VM' -Id $vm.vmid -Name $vm.name -Csv $csv -Node $nk
             }
 
             # ---- LXCs ----
@@ -136,7 +132,7 @@ function Stop-AllVMsAndContainers {
             $cts = $ctRaw | ConvertFrom-Json
             foreach ($ct in $cts) {
                 if ($ct.status -ne 'running') { continue }
-                Shutdown-RemoteGuest -Session $sess -Type 'LXC' -Id $ct.vmid -Name $ct.name -Csv $csv -Node $nk
+                Stop-RemoteGuest -Session $sess -Type 'LXC' -Id $ct.vmid -Name $ct.name -Csv $csv -Node $nk
             }
         } finally { Remove-SSHSession $sess | Out-Null }
     }
@@ -144,11 +140,17 @@ function Stop-AllVMsAndContainers {
     return $true
 }
 
-function Shutdown-RemoteGuest {
+function Stop-RemoteGuest {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [SSH.SshSession]$Session, [string]$Type, [int]$Id,
         [string]$Name, [string]$Csv, [string]$Node
     )
+
+    if (-not $PSCmdlet.ShouldProcess("$Type $Name ($Id)", "Stop")) {
+        return $false
+    }
+
     $cmdStop = if ($Type -eq 'VM') { "qm shutdown $Id" } else { "pct shutdown $Id" }
     $cmdStat = if ($Type -eq 'VM') { "qm status $Id" } else { "pct status $Id" }
 
@@ -172,54 +174,99 @@ function Shutdown-RemoteGuest {
 function Start-Migration {
     <#
 .SYNOPSIS
-    Main orchestrator called by Orchestrator.ps1.  Loads config, executes
-    each step in order, wraps everything in Try/Catch for rollback.
+    High-level wrapper that executes every migration phase in order.
+.PARAMETER ConfigFile
+    Optional JSON configuration file. If omitted, launches interactive setup wizard and auto-saves config.
+.PARAMETER LogLevel
+    Info (default) | Warning | Error | Debug
+.PARAMETER DryRun
+    Switch to simulate mode (no remote changes).
 #>
     [CmdletBinding()]
     param(
         [string]$ConfigFile,
-        [ValidateSet('Info', 'Warning', 'Error', 'Debug')] [string]$LogLevel = 'Info',
+        [ValidateSet('Info', 'Warning', 'Error', 'Debug')][string]$LogLevel = 'Info',
         [switch]$DryRun
     )
+    $script:LogLevel = $LogLevel
+    $script:DryRun = $DryRun.IsPresent
 
-    # ---------- init globals ----------
-    $Global:PXM_LogLevel = $LogLevel
-    $Global:PXM_DryRun = $DryRun.IsPresent
-    $Global:PXM_LogFile = (Get-Variable -Scope Script -Name Root).Value | `
-            Join-Path -ChildPath "logs/orchestrator_$($Global:PXM_TimeStamp).log"
+    Write-LogMessage Info '=== Proxmox Migration Orchestrator Started ==='
 
-    # ---------- default node map ----------
-    $nodes = @{
-        'pm1'       = @{IP = '192.168.1.202'; Hostname = 'pm1'      ; Interfaces = @() }
-        'rg-prox01' = @{IP = '192.168.1.200'; Hostname = 'rg-prox01'; Interfaces = @() }
-        'rg-prox03' = @{IP = '192.168.1.222'; Hostname = 'rg-prox03'; Interfaces = @() }
+    # 1. Ensure dependency module
+    if (-not (Get-Module -Name Posh-SSH -ListAvailable)) {
+        throw 'Posh-SSH module missing. Install-Module Posh-SSH and retry.'
     }
+    Import-Module Posh-SSH -Force
 
-    # ---------- load / collect configuration ----------
-    if ($ConfigFile) {
-        Write-LogMessage Info "Loading configuration file $ConfigFile"
-        $json = Get-Content $ConfigFile | ConvertFrom-Json
-        $nodes = $json.Nodes
-        $ClusterName = $json.ClusterName
-        $PBSVMID = $json.PBSVMID
-        $PBSMemory = $json.PBSMemory
+    # 2. Load or create configuration
+    if ($ConfigFile -and (Test-Path $ConfigFile)) {
+        Write-LogMessage Info "Loading config file $ConfigFile"
+        $config = Get-Content $ConfigFile | ConvertFrom-Json
     } else {
-        Write-LogMessage Info 'Interactive configuration wizard starting…'
-        # (interactive gathering code identical to earlier, omitted for brevity)
+        Write-LogMessage Warning 'No config file supplied; generating interactively.'
+        # --- Interactive setup wizard ---
+        $config = [PSCustomObject]@{
+            Timestamp   = $script:TimeStamp
+            ClusterName = Read-Host "Enter cluster name [proxmox-cluster]"
+            PBSVMID     = [int](Read-Host "Enter PBS VMID [200]")
+            PBSMemory   = [int](Read-Host "Enter PBS VM RAM (MB) ")
+            Nodes       = [ordered]@{}
+        }
+        if (-not $config.ClusterName) { $config.ClusterName = 'proxmox-cluster' }
+        if (-not $config.PBSVMID) { $config.PBSVMID = 200 }
+        if (-not $config.PBSMemory) { $config.PBSMemory = 4096 }
+
+        $nodeNames = @(
+            @{Name = 'pm1'; Role = 'cluster-root'; DefaultIP = '192.168.1.100' },
+            @{Name = 'rg-prox01'; Role = 'migration-source'; DefaultIP = '192.168.1.101' },
+            @{Name = 'rg-prox03'; Role = 'backup-nas-pbs'; DefaultIP = '192.168.1.102' }
+        )
+
+        foreach ($nDef in $nodeNames) {
+            $n = $nDef.Name
+            Write-Host "`nNode: $n ($($nDef.Role))" -ForegroundColor Cyan
+            $ip = Read-Host "IP Address [$($nDef.DefaultIP)]"
+            if (-not $ip) { $ip = $nDef.DefaultIP }
+            $hn = Read-Host "Hostname [$n]"
+            if (-not $hn) { $hn = $n }
+            $ifaces = Read-Host "Network interfaces for LACP bonding (comma-separated, e.g. eth0,eth1)"
+            $ifaceArr = $ifaces -split "," | ForEach-Object { $_.Trim() }
+            if ($ifaceArr.Count -lt 2) {
+                throw "At least 2 interfaces required for LACP on $n."
+            }
+            $config.Nodes.$n = @{
+                IP         = $ip
+                Hostname   = $hn
+                Interfaces = $ifaceArr
+                Role       = $nDef.Role
+            }
+        }
+
+        # Save autogenerated config
+        $cfgPath = Join-Path $script:ConfigDir "nodes_$script:TimeStamp.json"
+        $config | ConvertTo-Json -Depth 10 | Set-Content $cfgPath
+        Write-LogMessage Info "Interactive config saved to $cfgPath"
     }
+    $nodes = $config.Nodes
 
-    # ---------- pre-flight ----------
-    Write-LogMessage Info '=== PRE-FLIGHT CHECKS ==='
-    Invoke-PreflightChecks -Nodes $nodes
-
-    # ---------- shutdown ----------
-    Write-LogMessage Info '=== SHUTDOWN VMS/LXCS ==='
-    Stop-AllVMsAndContainers -Nodes $nodes -ReportsDir (Get-Variable ReportsDir -Scope Script).Value
-
-    # ---------- network / etc … ----------
-    # call each stub above (omitted here)
-
-    Write-LogMessage Info '🎉 Migration completed'
+    try {
+        # ==== Core workflow ====
+        Invoke-PreflightChecks -Nodes $nodes
+        Stop-AllVMsAndContainers -Nodes $nodes
+        Invoke-NetworkOptimisation -Nodes $nodes
+        Set-NetworkChanges -Nodes $nodes
+        New-ProxmoxCluster -Nodes $nodes -ClusterName $config.ClusterName
+        Deploy-ProxmoxBackupServer -Nodes $nodes -VMID $config.PBSVMID -MemoryMB $config.PBSMemory
+        Invoke-Migration -Nodes $nodes
+        New-FinalReports
+        Write-LogMessage Info '🎉 Migration completed successfully.'
+        Write-Host "`nMigration finished. All logs and reports written to $script:ReportsDir" -ForegroundColor Green
+    } catch {
+        Write-LogMessage Error $_.Exception.Message
+        Invoke-EmergencyRollback -Nodes $nodes
+        throw
+    }
 }
 
 function Invoke-NetworkOptimisation {
@@ -428,12 +475,18 @@ iface vmbr0 inet manual
     Write-LogMessage Info "Post-LACP benchmarks completed. Report: $postReport"
 }
 
-function Set-NetworkChanges {
+function Set-NetworkChange {
     <#
 .SYNOPSIS
     Applies new hostnames and IPs (auto-backup before modifying).
 #>
+    [CmdletBinding(SupportsShouldProcess)]
     param([hashtable]$Nodes)
+
+    if (-not $PSCmdlet.ShouldProcess("Network Configuration", "Apply Changes")) {
+        return
+    }
+
     foreach ($key in $Nodes.Keys) {
         $ip = $Nodes[$key].IP
         $hostname = $Nodes[$key].Hostname
@@ -453,7 +506,13 @@ function New-ProxmoxCluster {
 .SYNOPSIS
     Forms initial cluster (pm1 + rg-prox03), adds rg-prox01 after migration.
 #>
+    [CmdletBinding(SupportsShouldProcess)]
     param([hashtable]$Nodes, [string]$ClusterName)
+
+    if (-not $PSCmdlet.ShouldProcess("Proxmox Cluster '$ClusterName'", "Create")) {
+        return
+    }
+
     # Assume pm1 is the root
     $pm1IP = $Nodes['pm1'].IP
     $rg_prox03IP = $Nodes['rg-prox03'].IP
@@ -519,9 +578,9 @@ function Invoke-Migration {
             # Rsync config/disks with checksums
             $diskPath = "/var/lib/vz/images/$vmid"
             $configPath = "/etc/pve/qemu-server/$vmid.conf"
-            $rsyncCmd = "rsync -az --progress $diskPath root@$dstIP:/var/lib/vz/images/ --checksum --inplace --ignore-existing"
+            $rsyncCmd = "rsync -az --progress $diskPath root@${dstIP}:/var/lib/vz/images/ --checksum --inplace --ignore-existing"
             Invoke-SSH $srcSess $rsyncCmd
-            $rsyncConfig = "rsync -az $configPath root@$dstIP:/etc/pve/qemu-server/"
+            $rsyncConfig = "rsync -az $configPath root@${dstIP}:/etc/pve/qemu-server/"
             Invoke-SSH $srcSess $rsyncConfig
             Write-LogMessage Info "Migrated VM $vmid"
         }
@@ -532,9 +591,9 @@ function Invoke-Migration {
             Start-Sleep -Seconds 2
             $ctPath = "/var/lib/vz/private/$ctid"
             $confPath = "/etc/pve/lxc/$ctid.conf"
-            $rsyncCmd = "rsync -az --progress $ctPath root@$dstIP:/var/lib/vz/private/ --checksum --inplace --ignore-existing"
+            $rsyncCmd = "rsync -az --progress $ctPath root@${dstIP}:/var/lib/vz/private/ --checksum --inplace --ignore-existing"
             Invoke-SSH $srcSess $rsyncCmd
-            $rsyncConf = "rsync -az $confPath root@$dstIP:/etc/pve/lxc/"
+            $rsyncConf = "rsync -az $confPath root@${dstIP}:/etc/pve/lxc/"
             Invoke-SSH $srcSess $rsyncConf
             Write-LogMessage Info "Migrated LXC $ctid"
         }
@@ -545,11 +604,18 @@ function Invoke-Migration {
     }
 }
 
-function New-FinalReports {
+function New-FinalReport {
     <#
 .SYNOPSIS
     Creates summary logs and migration reports, zips everything for audit/compliance.
 #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param()
+
+    if (-not $PSCmdlet.ShouldProcess("Final Migration Report", "Generate")) {
+        return
+    }
+
     $reportFiles = Get-ChildItem $script:ReportsDir -Filter \"*.csv\" | Select-Object -ExpandProperty FullName
     $summaryPath = Join-Path $script:ReportsDir \"migration_summary_$script:TimeStamp.txt\"
     \"Proxmox Cluster Migration Summary ($script:TimeStamp)\n\" | Set-Content $summaryPath
@@ -584,7 +650,7 @@ function Invoke-EmergencyRollback {
         }
     }
     # Start guests
-    Stop-AllVMsAndContainers -Nodes $Nodes # Already supports rollback if rerun
+    Stop-AllVMAndContainer -Nodes $Nodes # Already supports rollback if rerun
 
     # Clean cluster state
     foreach ($n in $Nodes.Keys) {
@@ -599,4 +665,65 @@ function Invoke-EmergencyRollback {
         Write-LogMessage Info \"Cleaned partial cluster on $n\"
     }
     Write-LogMessage Info \"Rollback completed\"
+}
+function Invoke-PreflightChecks {
+    <#
+.SYNOPSIS
+    Verifies SSH connectivity, Proxmox version, and backs up current network and hosts configurations on all defined nodes.
+.DESCRIPTION
+    - Ensures SSH access to each node using provided SSH keys/credentials.
+    - Validates each node is running the expected Proxmox VE version (requires version 9.0.x).
+    - Creates a timestamped backup of /etc/network/interfaces and /etc/hosts, both locally (to $script:ConfigDir\backups) and remotely (on the node itself).
+    - Aborts with clear logs if any node fails a preflight check.
+.NOTES
+    Logs all progress and results, aborts on any critical failure.
+#>
+    param([hashtable]$Nodes)
+
+    Write-LogMessage Info "==== Proxmox Pre-flight Checks ===="
+    $backupDir = Join-Path $script:ConfigDir "backups"
+    if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
+
+    foreach ($name in $Nodes.Keys) {
+        $ip = $Nodes[$name].IP
+        Write-LogMessage Info ("Checking connectivity and configuration on {0} ({1})" -f $name, $ip)
+
+        if (-not (Test-SSHConnection $ip)) {
+            Write-LogMessage Error "SSH connection FAILED for $name ($ip)"
+            throw "Cannot SSH to $name ($ip). Aborting."
+        }
+
+        $sess = New-SSHSession -ComputerName $ip -Credential (Get-SSHCredential) -AcceptKey
+        try {
+            # Validate Proxmox version
+            $ver = Invoke-SSHCommand -SSHSession $sess -Command 'pveversion -v | head -n1' -TimeOut 30 | Select-Object -Expand Output
+            Write-LogMessage Info "$name: $ver"
+
+            if ($ver -notmatch 'pve-manager/9\.0') {
+                Write-LogMessage Warning "$name: Expected Proxmox VE 9.0.x, got: $ver"
+                if (-not (Confirm-Action "This node may not be compatible. Continue anyway?")) {
+                    throw "Version check failed on $name"
+                }
+            }
+
+            $ts = $script:TimeStamp
+            # Create remote network and hosts backups (timestamped)
+            Invoke-SSHCommand -SSHSession $sess -Command "cp /etc/network/interfaces /etc/network/interfaces.bak.$ts" | Out-Null
+            Invoke-SSHCommand -SSHSession $sess -Command "cp /etc/hosts /etc/hosts.bak.$ts" | Out-Null
+
+            # Fetch backups locally as well
+            $netBackup = Join-Path $backupDir "${name}_interfaces_$ts"
+            $hostsBackup = Join-Path $backupDir "${name}_hosts_$ts"
+            Get-SCPFile -ComputerName $ip -Credential (Get-SSHCredential) -RemoteFile "/etc/network/interfaces" -LocalFile $netBackup -ErrorAction Stop
+            Get-SCPFile -ComputerName $ip -Credential (Get-SSHCredential) -RemoteFile "/etc/hosts" -LocalFile $hostsBackup -ErrorAction Stop
+
+            Write-LogMessage Info "Backups saved for $name: $netBackup, $hostsBackup"
+        } catch {
+            Write-LogMessage Error "Failed pre-flight on $name ($ip): $_"
+            throw
+        } finally {
+            Remove-SSHSession $sess | Out-Null
+        }
+    }
+    Write-LogMessage Info "==== All pre-flight checks PASSED. ===="
 }

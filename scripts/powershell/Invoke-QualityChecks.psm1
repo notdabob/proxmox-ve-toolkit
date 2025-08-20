@@ -15,13 +15,13 @@
 
 .EXAMPLE
     Test-PowerShellScripts -Path "scripts/" -Fix
-    Test-ShellScripts -Path "scripts/shell/"
+    Test-ShellScript -Path "scripts/shell/"
 #>
 
 # Set consistent error handling
 $ErrorActionPreference = "Stop"
 
-function Test-PowerShellScripts {
+function Test-PowerShellScript {
     <#
     .SYNOPSIS
         Runs PSScriptAnalyzer on PowerShell scripts
@@ -50,7 +50,7 @@ function Test-PowerShellScripts {
         [string]$Severity = "Warning"
     )
 
-    Write-Host "🔍 Analyzing PowerShell scripts..." -ForegroundColor Blue
+    Write-Information "🔍 Analyzing PowerShell scripts..." -InformationAction Continue
 
     try {
         # Ensure PSScriptAnalyzer is available
@@ -74,7 +74,7 @@ function Test-PowerShellScripts {
         }
 
         if (-not $files) {
-            Write-Host "ℹ️ No PowerShell files found in: $Path" -ForegroundColor Yellow
+            Write-Information "ℹ️ No PowerShell files found in: $Path" -InformationAction Continue
             return $true
         }
 
@@ -82,7 +82,7 @@ function Test-PowerShellScripts {
         $filesWithIssues = 0
 
         foreach ($file in $files) {
-            Write-Host "📄 Checking: $($file.Name)" -ForegroundColor Gray
+            Write-Information "📄 Checking: $($file.Name)" -InformationAction Continue
             
             $results = Invoke-ScriptAnalyzer -Path $file.FullName -Severity $Severity
 
@@ -90,34 +90,28 @@ function Test-PowerShellScripts {
                 $filesWithIssues++
                 $totalIssues += $results.Count
                 
-                Write-Host "  ❌ $($results.Count) issue(s) found:" -ForegroundColor Red
+                Write-Information "  ❌ $($results.Count) issue(s) found:" -InformationAction Continue
                 
                 foreach ($result in $results) {
-                    $severityColor = switch ($result.Severity) {
-                        "Error" { "Red" }
-                        "Warning" { "Yellow" }
-                        "Information" { "Cyan" }
-                        default { "White" }
-                    }
-                    
-                    Write-Host "    [$($result.Severity)] Line $($result.Line): $($result.Message)" -ForegroundColor $severityColor
-                    Write-Host "      Rule: $($result.RuleName)" -ForegroundColor Gray
+                    # Remove unused color variable since we're using Write-Information
+                    Write-Information "    [$($result.Severity)] Line $($result.Line): $($result.Message)" -InformationAction Continue
+                    Write-Information "      Rule: $($result.RuleName)" -InformationAction Continue
                     
                     if ($result.SuggestedCorrections) {
-                        Write-Host "      Suggestion: $($result.SuggestedCorrections[0].Description)" -ForegroundColor Green
+                        Write-Information "      Suggestion: $($result.SuggestedCorrections[0].Description)" -InformationAction Continue
                     }
                 }
             } else {
-                Write-Host "  ✅ No issues found" -ForegroundColor Green
+                Write-Information "  ✅ No issues found" -InformationAction Continue
             }
         }
 
         # Summary
-        Write-Host ""
-        Write-Host "📊 PowerShell Analysis Summary:" -ForegroundColor Cyan
-        Write-Host "  Files analyzed: $($files.Count)"
-        Write-Host "  Files with issues: $filesWithIssues"
-        Write-Host "  Total issues: $totalIssues"
+        Write-Information "" -InformationAction Continue
+        Write-Information "📊 PowerShell Analysis Summary:" -InformationAction Continue
+        Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
+        Write-Information "  Files with issues: $filesWithIssues" -InformationAction Continue
+        Write-Information "  Total issues: $totalIssues" -InformationAction Continue
 
         return $totalIssues -eq 0
     } catch {
@@ -126,7 +120,7 @@ function Test-PowerShellScripts {
     }
 }
 
-function Test-ShellScripts {
+function Test-ShellScript {
     <#
     .SYNOPSIS
         Runs shellcheck on shell scripts
@@ -151,7 +145,7 @@ function Test-ShellScripts {
         [string]$Severity = "warning"
     )
 
-    Write-Host "🔍 Analyzing shell scripts..." -ForegroundColor Blue
+    Write-Information "🔍 Analyzing shell scripts..." -InformationAction Continue
 
     try {
         # Check if shellcheck is available
@@ -178,55 +172,47 @@ function Test-ShellScripts {
         }
 
         if (-not $files) {
-            Write-Host "ℹ️ No shell script files found in: $Path" -ForegroundColor Yellow
+            Write-Information "ℹ️ No shell script files found in: $Path" -InformationAction Continue
             return $true
         }
 
         $allPassed = $true
 
         foreach ($file in $files) {
-            Write-Host "📄 Checking: $($file.Name)" -ForegroundColor Gray
+            Write-Information "📄 Checking: $($file.Name)" -InformationAction Continue
             
             # Run shellcheck
             $result = & shellcheck --severity=$Severity --format=json $file.FullName 2>&1
             
             if ($LASTEXITCODE -eq 0 -and -not $result) {
-                Write-Host "  ✅ No issues found" -ForegroundColor Green
+                Write-Information "  ✅ No issues found" -InformationAction Continue
             } else {
                 $allPassed = $false
                 
                 if ($result) {
                     try {
                         $issues = $result | ConvertFrom-Json
-                        Write-Host "  ❌ $($issues.Count) issue(s) found:" -ForegroundColor Red
+                        Write-Information "  ❌ $($issues.Count) issue(s) found:" -InformationAction Continue
                         
                         foreach ($issue in $issues) {
-                            $severityColor = switch ($issue.level) {
-                                "error" { "Red" }
-                                "warning" { "Yellow" }
-                                "info" { "Cyan" }
-                                "style" { "Magenta" }
-                                default { "White" }
-                            }
-                            
-                            Write-Host "    [$($issue.level)] Line $($issue.line): $($issue.message)" -ForegroundColor $severityColor
-                            Write-Host "      Code: SC$($issue.code)" -ForegroundColor Gray
+                            Write-Information "    [$($issue.level)] Line $($issue.line): $($issue.message)" -InformationAction Continue
+                            Write-Information "      Code: SC$($issue.code)" -InformationAction Continue
                         }
                     } catch {
                         # If JSON parsing fails, show raw output
-                        Write-Host "  ❌ Issues found:" -ForegroundColor Red
-                        Write-Host "    $result" -ForegroundColor Yellow
+                        Write-Information "  ❌ Issues found:" -InformationAction Continue
+                        Write-Information "    $result" -InformationAction Continue
                     }
                 } else {
-                    Write-Host "  ❌ shellcheck failed with exit code: $LASTEXITCODE" -ForegroundColor Red
+                    Write-Information "  ❌ shellcheck failed with exit code: $LASTEXITCODE" -InformationAction Continue
                 }
             }
         }
 
-        Write-Host ""
-        Write-Host "📊 Shell Script Analysis Summary:" -ForegroundColor Cyan
-        Write-Host "  Files analyzed: $($files.Count)"
-        Write-Host "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })"
+        Write-Information "" -InformationAction Continue
+        Write-Information "📊 Shell Script Analysis Summary:" -InformationAction Continue
+        Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
+        Write-Information "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })" -InformationAction Continue
 
         return $allPassed
     } catch {
@@ -235,7 +221,7 @@ function Test-ShellScripts {
     }
 }
 
-function Test-YAMLFiles {
+function Test-YAMLFile {
     <#
     .SYNOPSIS
         Validates YAML files for syntax and formatting
@@ -254,7 +240,7 @@ function Test-YAMLFiles {
         [switch]$Recurse
     )
 
-    Write-Host "🔍 Validating YAML files..." -ForegroundColor Blue
+    Write-Information "🔍 Validating YAML files..." -InformationAction Continue
 
     try {
         if (-not (Test-Path $Path)) {
@@ -275,25 +261,25 @@ function Test-YAMLFiles {
         }
 
         if (-not $files) {
-            Write-Host "ℹ️ No YAML files found in: $Path" -ForegroundColor Yellow
+            Write-Information "ℹ️ No YAML files found in: $Path" -InformationAction Continue
             return $true
         }
 
         $allValid = $true
 
         foreach ($file in $files) {
-            Write-Host "📄 Validating: $($file.Name)" -ForegroundColor Gray
+            Write-Information "📄 Validating: $($file.Name)" -InformationAction Continue
             
             # Try yq first, then fallback to PowerShell YAML parsing
             if (Get-Command yq -ErrorAction SilentlyContinue) {
                 $result = & yq validate $file.FullName 2>&1
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "  ✅ Valid YAML" -ForegroundColor Green
+                    Write-Information "  ✅ Valid YAML" -InformationAction Continue
                 } else {
                     $allValid = $false
-                    Write-Host "  ❌ Invalid YAML:" -ForegroundColor Red
-                    Write-Host "    $result" -ForegroundColor Yellow
+                    Write-Information "  ❌ Invalid YAML:" -InformationAction Continue
+                    Write-Information "    $result" -InformationAction Continue
                 }
             } else {
                 # Fallback to basic YAML parsing
@@ -302,7 +288,7 @@ function Test-YAMLFiles {
                     if (Get-Module powershell-yaml) {
                         $content = Get-Content $file.FullName -Raw
                         $null = ConvertFrom-Yaml $content
-                        Write-Host "  ✅ Valid YAML" -ForegroundColor Green
+                        Write-Information "  ✅ Valid YAML" -InformationAction Continue
                     } else {
                         # Basic validation - check for common YAML syntax issues
                         $content = Get-Content $file.FullName
@@ -313,34 +299,34 @@ function Test-YAMLFiles {
                             
                             # Check for tab characters
                             if ($line -match '\t') {
-                                Write-Host "  ⚠️ Line $($i + 1): Contains tab characters (should use spaces)" -ForegroundColor Yellow
+                                Write-Information "  ⚠️ Line $($i + 1): Contains tab characters (should use spaces)" -InformationAction Continue
                                 $hasErrors = $true
                             }
                             
                             # Check for common syntax issues
                             if ($line -match ':\s*\[.*[^]]$') {
-                                Write-Host "  ⚠️ Line $($i + 1): Possible unclosed array" -ForegroundColor Yellow
+                                Write-Information "  ⚠️ Line $($i + 1): Possible unclosed array" -InformationAction Continue
                                 $hasErrors = $true
                             }
                         }
                         
                         if (-not $hasErrors) {
-                            Write-Host "  ✅ Basic validation passed" -ForegroundColor Green
+                            Write-Information "  ✅ Basic validation passed" -InformationAction Continue
                         } else {
                             $allValid = $false
                         }
                     }
                 } catch {
                     $allValid = $false
-                    Write-Host "  ❌ YAML parsing error: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Information "  ❌ YAML parsing error: $($_.Exception.Message)" -InformationAction Continue
                 }
             }
         }
 
-        Write-Host ""
-        Write-Host "📊 YAML Validation Summary:" -ForegroundColor Cyan
-        Write-Host "  Files analyzed: $($files.Count)"
-        Write-Host "  Result: $(if ($allValid) { "✅ All files valid" } else { "❌ Issues found" })"
+        Write-Information "" -InformationAction Continue
+        Write-Information "📊 YAML Validation Summary:" -InformationAction Continue
+        Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
+        Write-Information "  Result: $(if ($allValid) { "✅ All files valid" } else { "❌ Issues found" })" -InformationAction Continue
 
         return $allValid
     } catch {
@@ -362,30 +348,23 @@ function Get-MarkdownLintCommand {
     $localMarkdownlint = Join-Path $projectRoot "node_modules/.bin/markdownlint"
     
     if (Test-Path $localMarkdownlint) {
-        return $localMarkdownlint
+        return @($localMarkdownlint)
     }
     
-    # Check if we can use npx
-    if (Get-Command npx -ErrorAction SilentlyContinue) {
-        try {
-            $testOutput = npx --yes markdownlint-cli --version 2>$null
-            if ($testOutput) {
-                return "npx", "--yes", "markdownlint-cli"
-            }
-        } catch {
-            # npx test failed
-        }
+    # Check if we can use npx (requires npm to be installed)
+    if ((Get-Command npm -ErrorAction SilentlyContinue) -and (Get-Command npx -ErrorAction SilentlyContinue)) {
+        return @("npx", "--yes", "markdownlint-cli")
     }
     
     # Fall back to global installation
     if (Get-Command markdownlint -ErrorAction SilentlyContinue) {
-        return "markdownlint"
+        return @("markdownlint")
     }
     
     return $null
 }
 
-function Test-MarkdownFiles {
+function Test-MarkdownFile {
     <#
     .SYNOPSIS
         Validates Markdown files for style and formatting
@@ -404,7 +383,7 @@ function Test-MarkdownFiles {
         [switch]$Recurse
     )
 
-    Write-Host "📝 Validating Markdown files..." -ForegroundColor Blue
+    Write-Information "📝 Validating Markdown files..." -InformationAction Continue
 
     try {
         if (-not (Test-Path $Path)) {
@@ -415,7 +394,10 @@ function Test-MarkdownFiles {
         # Check if markdownlint is available
         $markdownlintCmd = Get-MarkdownLintCommand
         if (-not $markdownlintCmd) {
-            Write-Warning "⚠️ markdownlint not found. Run Install-AllQualityTools to install it."
+            Write-Warning "⚠️ markdownlint not available. Possible solutions:"
+            Write-Warning "   1. Run Install-AllQualityTools to install via npx"
+            Write-Warning "   2. Install Node.js if npm/npx are missing"
+            Write-Warning "   3. Install markdownlint globally: npm install -g markdownlint-cli"
             return $false
         }
 
@@ -432,14 +414,14 @@ function Test-MarkdownFiles {
         }
 
         if (-not $files) {
-            Write-Host "ℹ️ No Markdown files found in: $Path" -ForegroundColor Yellow
+            Write-Information "ℹ️ No Markdown files found in: $Path" -InformationAction Continue
             return $true
         }
 
         $allPassed = $true
 
         foreach ($file in $files) {
-            Write-Host "📄 Linting: $($file.Name)" -ForegroundColor Gray
+            Write-Information "📄 Linting: $($file.Name)" -InformationAction Continue
             
             # Run markdownlint with appropriate command
             try {
@@ -456,10 +438,10 @@ function Test-MarkdownFiles {
             }
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "  ✅ No issues found" -ForegroundColor Green
+                Write-Information "  ✅ No issues found" -InformationAction Continue
             } else {
                 $allPassed = $false
-                Write-Host "  ❌ Issues found:" -ForegroundColor Red
+                Write-Information "  ❌ Issues found:" -InformationAction Continue
                 
                 # Parse and display markdownlint output
                 $issues = $result -split "`n" | Where-Object { $_ -and $_ -notmatch "^$" }
@@ -467,18 +449,18 @@ function Test-MarkdownFiles {
                     if ($issue -match "^(.+):(\d+):\d*\s*(.+)$") {
                         $lineNumber = $Matches[2]
                         $message = $Matches[3]
-                        Write-Host "    Line $lineNumber`: $message" -ForegroundColor Yellow
+                        Write-Information "    Line $lineNumber`: $message" -InformationAction Continue
                     } else {
-                        Write-Host "    $issue" -ForegroundColor Yellow
+                        Write-Information "    $issue" -InformationAction Continue
                     }
                 }
             }
         }
 
-        Write-Host ""
-        Write-Host "📊 Markdown Linting Summary:" -ForegroundColor Cyan
-        Write-Host "  Files analyzed: $($files.Count)"
-        Write-Host "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })"
+        Write-Information "" -InformationAction Continue
+        Write-Information "📊 Markdown Linting Summary:" -InformationAction Continue
+        Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
+        Write-Information "  Result: $(if ($allPassed) { " -InformationAction Continue✅ All files passed" } else { "❌ Issues found" })"
 
         return $allPassed
     } catch {
@@ -487,7 +469,7 @@ function Test-MarkdownFiles {
     }
 }
 
-function Invoke-AllQualityChecks {
+function Invoke-AllQualityCheck {
     <#
     .SYNOPSIS
         Runs all quality checks on the project
@@ -504,20 +486,20 @@ function Invoke-AllQualityChecks {
         [switch]$ExitOnFailure
     )
 
-    Write-Host "🚀 Running all quality checks..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Information "🚀 Running all quality checks..." -InformationAction Continue
+    Write-Information "" -InformationAction Continue
 
     $results = @{}
 
     # PowerShell Scripts
     if (Test-Path (Join-Path $Path "scripts") -PathType Container) {
-        $results.PowerShell = Test-PowerShellScripts -Path (Join-Path $Path "scripts") -Recurse
+        $results.PowerShell = Test-PowerShellScript -Path (Join-Path $Path "scripts") -Recurse
     } else {
-        Write-Host "ℹ️ No scripts directory found, skipping PowerShell analysis" -ForegroundColor Yellow
+        Write-Information "ℹ️ No scripts directory found, skipping PowerShell analysis" -InformationAction Continue
         $results.PowerShell = $true
     }
 
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
 
     # Shell Scripts
     $shellScriptPaths = @("scripts/shell", "scripts", ".")
@@ -534,23 +516,23 @@ function Invoke-AllQualityChecks {
     }
 
     if ($shellScriptPath) {
-        $results.ShellScripts = Test-ShellScripts -Path $shellScriptPath -Recurse
+        $results.ShellScripts = Test-ShellScript -Path $shellScriptPath -Recurse
     } else {
-        Write-Host "ℹ️ No shell scripts found, skipping shell script analysis" -ForegroundColor Yellow
+        Write-Information "ℹ️ No shell scripts found, skipping shell script analysis" -InformationAction Continue
         $results.ShellScripts = $true
     }
 
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
 
     # YAML Files
     if (Test-Path (Join-Path $Path "configs") -PathType Container) {
-        $results.YAML = Test-YAMLFiles -Path (Join-Path $Path "configs") -Recurse
+        $results.YAML = Test-YAMLFile -Path (Join-Path $Path "configs") -Recurse
     } else {
-        Write-Host "ℹ️ No configs directory found, skipping YAML validation" -ForegroundColor Yellow
+        Write-Information "ℹ️ No configs directory found, skipping YAML validation" -InformationAction Continue
         $results.YAML = $true
     }
 
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
 
     # Markdown Files
     $markdownPaths = @(".github/instructions", "docs", ".")
@@ -567,29 +549,29 @@ function Invoke-AllQualityChecks {
     }
 
     if ($markdownPath) {
-        $results.Markdown = Test-MarkdownFiles -Path $markdownPath -Recurse
+        $results.Markdown = Test-MarkdownFile -Path $markdownPath -Recurse
     } else {
-        Write-Host "ℹ️ No markdown files found, skipping markdown linting" -ForegroundColor Yellow
+        Write-Information "ℹ️ No markdown files found, skipping markdown linting" -InformationAction Continue
         $results.Markdown = $true
     }
 
     # Summary
-    Write-Host ""
-    Write-Host "📊 Quality Check Summary:" -ForegroundColor Cyan
-    Write-Host "========================" -ForegroundColor Cyan
+    Write-Information "" -InformationAction Continue
+    Write-Information "📊 Quality Check Summary:" -InformationAction Continue
+    Write-Information "========================" -InformationAction Continue
 
     $allPassed = $true
     foreach ($check in $results.GetEnumerator()) {
         $status = if ($check.Value) { "✅ PASSED" } else { "❌ FAILED"; $allPassed = $false }
         $color = if ($check.Value) { "Green" } else { "Red" }
-        Write-Host "  $($check.Key): $status" -ForegroundColor $color
+        Write-Information "  $($check.Key): $status" -InformationAction Continue -ForegroundColor $color
     }
 
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
     if ($allPassed) {
-        Write-Host "🎉 All quality checks passed!" -ForegroundColor Green
+        Write-Information "🎉 All quality checks passed!" -InformationAction Continue
     } else {
-        Write-Host "⚠️ Some quality checks failed. Please review the issues above." -ForegroundColor Yellow
+        Write-Information "⚠️ Some quality checks failed. Please review the issues above." -InformationAction Continue
         
         if ($ExitOnFailure) {
             exit 1
@@ -599,7 +581,7 @@ function Invoke-AllQualityChecks {
     return $allPassed
 }
 
-function Invoke-QuickFixes {
+function Invoke-QuickFix {
     <#
     .SYNOPSIS
         Applies automatic fixes where possible
@@ -612,10 +594,10 @@ function Invoke-QuickFixes {
         [string]$Path = "."
     )
 
-    Write-Host "🔧 Applying quick fixes..." -ForegroundColor Cyan
+    Write-Information "🔧 Applying quick fixes..." -InformationAction Continue
 
     # PowerShell formatting (basic fixes)
-    Write-Host "📝 Applying PowerShell fixes..." -ForegroundColor Blue
+    Write-Information "📝 Applying PowerShell fixes..." -InformationAction Continue
     
     $psFiles = Get-ChildItem -Path $Path -Include "*.ps1", "*.psm1" -Recurse -ErrorAction SilentlyContinue
     foreach ($file in $psFiles) {
@@ -631,22 +613,39 @@ function Invoke-QuickFixes {
             }
             
             Set-Content -Path $file.FullName -Value $content -NoNewline
-            Write-Host "  ✅ Fixed: $($file.Name)" -ForegroundColor Green
+            Write-Information "  ✅ Fixed: $($file.Name)" -InformationAction Continue
         } catch {
-            Write-Host "  ⚠️ Could not fix: $($file.Name) - $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-Information "  ⚠️ Could not fix: $($file.Name) - $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
-    Write-Host "🎉 Quick fixes applied!" -ForegroundColor Green
+    Write-Information "🎉 Quick fixes applied!" -InformationAction Continue
 }
 
 # Export functions
 Export-ModuleMember -Function @(
-    'Get-MarkdownLintCommand',
+    'Test-PowerShellScript',
+    'Test-ShellScript', 
+    'Test-YAMLFile',
+    'Test-MarkdownFile',
+    'Invoke-AllQualityCheck',
+    'Invoke-QuickFix'
+)
+
+# Export aliases for backward compatibility
+Export-ModuleMember -Alias @(
     'Test-PowerShellScripts',
-    'Test-ShellScripts', 
-    'Test-YAMLFiles',
+    'Test-ShellScripts',
+    'Test-YAMLFiles', 
     'Test-MarkdownFiles',
     'Invoke-AllQualityChecks',
     'Invoke-QuickFixes'
 )
+
+# Create the actual aliases
+New-Alias -Name 'Test-PowerShellScripts' -Value 'Test-PowerShellScript' -Force
+New-Alias -Name 'Test-ShellScripts' -Value 'Test-ShellScript' -Force  
+New-Alias -Name 'Test-YAMLFiles' -Value 'Test-YAMLFile' -Force
+New-Alias -Name 'Test-MarkdownFiles' -Value 'Test-MarkdownFile' -Force
+New-Alias -Name 'Invoke-AllQualityChecks' -Value 'Invoke-AllQualityCheck' -Force
+New-Alias -Name 'Invoke-QuickFixes' -Value 'Invoke-QuickFix' -Force
