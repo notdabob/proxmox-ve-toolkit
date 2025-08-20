@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-description: Report a bug or issue with SuperClaude
+description: Report a bug or issue with the Proxmox VE Toolkit
 title: "[Bug] "
 labels: ["bug", "needs-triage"]
 body:
@@ -11,11 +11,11 @@ body:
         to help us fix it.
 
   - type: input
-    id: superclaude-version
+    id: toolkit-version
     attributes:
-      label: SuperClaude Version
-      description: What version of SuperClaude are you using?
-      placeholder: v4.0.0
+      label: Toolkit Version
+      description: What version of the Proxmox VE Toolkit are you using?
+      placeholder: v1.0.0
     validations:
       required: true
 

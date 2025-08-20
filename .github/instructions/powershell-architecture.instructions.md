@@ -19,8 +19,8 @@ Organize PowerShell code into logical, reusable components:
 scripts/
 ├── powershell/                     # PowerShell modules and scripts
 │   ├── Core/                       # Core functionality modules
-│   │   ├── Install-QualityTools.psm1
-│   │   ├── Install-QualityTools.psd1
+│   │   ├── Install-QualityTool.psm1
+│   │   ├── Install-QualityTool.psd1
 │   │   ├── Invoke-QualityChecks.psm1
 │   │   └── Invoke-QualityChecks.psd1
 │   ├── Proxmox/                    # Proxmox-specific modules
@@ -43,7 +43,7 @@ Each module should have a single, well-defined responsibility:
 
 **✅ Good Separation:**
 
-- `Install-QualityTools.psm1` - Tool installation only
+- `Install-QualityTool.psm1` - Tool installation only
 - `Invoke-QualityChecks.psm1` - Quality checking only
 - `Get-ProxmoxConfig.psm1` - Configuration retrieval only
 - `Set-ProxmoxConfig.psm1` - Configuration management only
@@ -65,7 +65,7 @@ Each module should have a single, well-defined responsibility:
 | **Scope**        | One main operation             | Multiple related operations      |
 | **Dependencies** | Minimal external dependencies  | May depend on other modules      |
 | **Testing**      | Basic validation               | Comprehensive unit testing       |
-| **Examples**     | install.ps1, backup-config.ps1 | Install-QualityTools.psm1        |
+| **Examples**     | install.ps1, backup-config.ps1 | Install-QualityTool.psm1         |
 
 ### Module Splitting Guidelines
 
@@ -125,7 +125,7 @@ SimpleModule/
 
 **Modules (.psm1):**
 
-- Use Verb-Noun pattern: `Get-ProxmoxConfig.psm1`, `Install-QualityTools.psm1`
+- Use Verb-Noun pattern: `Get-ProxmoxConfig.psm1`, `Install-QualityTool.psm1`
 - Group related functions under same noun: `*-ProxmoxConfig.psm1`
 - Avoid plural nouns: `Get-ProxmoxConfigs.psm1` → `Get-ProxmoxConfig.psm1`
 
@@ -168,12 +168,12 @@ Level 1: Foundation Modules
 └── Write-Log.psm1              # No dependencies
 
 Level 2: Core Modules
-├── Install-QualityTools.psm1   # Depends on: Invoke-Python, Get-SystemInfo
+├── Install-QualityTool.psm1   # Depends on: Invoke-Python, Get-SystemInfo
 └── Get-ProxmoxConfig.psm1      # Depends on: Write-Log
 
 Level 3: Composite Modules
-├── Invoke-QualityChecks.psm1   # Depends on: Install-QualityTools, Write-Log
-└── Set-ProxmoxEnvironment.psm1 # Depends on: Get-ProxmoxConfig, Install-QualityTools
+├── Invoke-QualityChecks.psm1   # Depends on: Install-QualityTool, Write-Log
+└── Set-ProxmoxEnvironment.psm1 # Depends on: Get-ProxmoxConfig, Install-QualityTool
 ```
 
 **Avoid Circular Dependencies:**
@@ -359,7 +359,7 @@ catch {
 Tests/
 ├── Unit/                       # Unit tests for individual functions
 │   ├── Core/
-│   │   ├── Install-QualityTools.Tests.ps1
+│   │   ├── Install-QualityTool.Tests.ps1
 │   │   └── Invoke-QualityChecks.Tests.ps1
 │   └── Proxmox/
 │       └── Get-ProxmoxConfig.Tests.ps1

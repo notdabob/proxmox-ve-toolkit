@@ -239,7 +239,7 @@ This project includes comprehensive quality checking. All PowerShell code should
 
 ```powershell
 # Install all quality tools (no sudo required)
-Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Import-Module ./scripts/powershell/Install-QualityTool.psm1
 Install-AllQualityTool
 
 # Run all quality checks
@@ -311,7 +311,7 @@ function Import-ProjectModule {
 }
 
 # Usage
-Import-ProjectModule -ModuleName "Install-QualityTools" -Force
+Import-ProjectModule -ModuleName "Install-QualityTool" -Force
 Import-ProjectModule -ModuleName "Invoke-QualityChecks"
 ```
 

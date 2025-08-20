@@ -9,6 +9,8 @@ Use the platform-appropriate installation script:
 ```bash
 # macOS/Linux (bash)
 sh scripts/install.sh
+Test-ShellScript -Path scripts/shell/     # Check shell scripts only
+Test-YAMLFile -Path configs/              # Validate YAML files only
 
 # macOS/Linux (zsh)
 zsh scripts/install.zsh
@@ -40,7 +42,7 @@ The installation script automatically installs all quality tools using our cross
 
 ```powershell
 # Using our automated installation module (recommended)
-Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Import-Module ./scripts/powershell/Install-QualityTool.psm1
 Install-AllQualityTool -Force
 
 # This automatically installs:
@@ -70,12 +72,12 @@ Invoke-AllQualityCheck -Path . -ExitOnFailure
 
 # Run specific file type checks
 Test-PowerShellScript -Path "scripts/" -Recurse
-Test-ShellScripts -Path "scripts/shell/" -Recurse
-Test-YAMLFiles -Path "configs/" -Recurse
-Test-MarkdownFiles -Path "." -Recurse
+Test-ShellScript -Path "scripts/shell/" -Recurse
+Test-YAMLFile -Path "configs/" -Recurse
+Test-MarkdownFile -Path "." -Recurse
 
 # Quick verification that all tools are working
-Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Import-Module ./scripts/powershell/Install-QualityTool.psm1
 Test-QualityToolsInstallation
 ```
 
@@ -113,7 +115,7 @@ Quality checks run automatically on every push and pull request using our automa
 
 **Workflow Features:**
 
-- **Automated Tool Installation**: Uses `Install-QualityTools.psm1` to install all necessary tools
+- **Automated Tool Installation**: Uses `Install-QualityTool.psm1` to install all necessary tools
 - **Comprehensive Analysis**: Runs `Invoke-QualityChecks.psm1` for complete code validation
 - **Dependency Validation**: Ensures npm/npx availability before running markdownlint
 - **Cross-Platform**: Executes on Ubuntu with PowerShell 7.0+
@@ -162,7 +164,7 @@ proxmox-ve-toolkit/
 │   └── *.yaml                    # Other configuration files
 ├── scripts/                       # Cross-platform utility scripts
 │   ├── powershell/                # PowerShell modules and scripts
-│   │   ├── Install-QualityTools.psm1  # Quality tools installer
+│   │   ├── Install-QualityTool.psm1   # Quality tools installer
 │   │   ├── Invoke-QualityChecks.psm1  # Automated quality checks
 │   │   ├── Invoke-Python.psm1         # Python runner utility
 │   │   └── install.ps1                # Main installation script
@@ -179,7 +181,7 @@ This project includes PowerShell modules for automation and quality assurance:
 
 ```powershell
 # Quality Tools Management
-Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Import-Module ./scripts/powershell/Install-QualityTool.psm1
 Install-AllQualityTool                    # Install all quality check tools
 Test-QualityToolsInstallation             # Verify tools are working
 Show-ToolVersion                          # Display installed tool versions
@@ -187,9 +189,9 @@ Show-ToolVersion                          # Display installed tool versions
 # Quality Checks
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
 Invoke-AllQualityCheck                    # Run all quality checks
-Test-PowerShellScript -Path scripts/      # Check PowerShell scripts only
-Test-ShellScripts -Path scripts/shell/     # Check shell scripts only
-Test-YAMLFiles -Path configs/              # Validate YAML files only
+Test-PowerShellScript -Path scripts/       # Check PowerShell scripts only
+Test-ShellScript -Path scripts/shell/     # Check shell scripts only
+Test-YAMLFile -Path configs/              # Validate YAML files only
 
 # Python Integration (if needed)
 Import-Module ./scripts/powershell/Invoke-Python.psm1

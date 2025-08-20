@@ -10,7 +10,7 @@
     - Additional quality check dependencies
 
 .EXAMPLE
-    Import-Module ./scripts/powershell/Install-QualityTools.psm1
+    Import-Module ./scripts/powershell/Install-QualityTool.psm1
     Install-AllQualityTool
 
 .EXAMPLE
