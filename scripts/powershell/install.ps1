@@ -75,7 +75,7 @@ function Install-AllComponents {
         # Show next steps
         Write-Host "📋 Next Steps:" -ForegroundColor Cyan
         Write-Host "  1. Configure your environment variables in .env file"
-        Write-Host "  2. Run quality checks: Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1; Invoke-AllQualityChecks"
+        Write-Host "  2. Run quality checks: Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1; Invoke-AllQualityCheck"
         Write-Host "  3. Start developing your Proxmox VE toolkit!"
         Write-Host ""
         

@@ -81,7 +81,7 @@ jobs:
             Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1 -Force
             
             # Run all quality checks and exit on failure
-            \$allPassed = Invoke-AllQualityChecks -Path '.' -ExitOnFailure
+            \$allPassed = Invoke-AllQualityCheck -Path '.' -ExitOnFailure
             
             if (\$allPassed) {
               Write-Host ''

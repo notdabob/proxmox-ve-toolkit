@@ -41,7 +41,7 @@ The installation script automatically installs all quality tools using our cross
 ```powershell
 # Using our automated installation module (recommended)
 Import-Module ./scripts/powershell/Install-QualityTools.psm1
-Install-AllQualityTools -Force
+Install-AllQualityTool -Force
 
 # This automatically installs:
 # - PSScriptAnalyzer: PowerShell script analysis (cross-platform)
@@ -66,10 +66,10 @@ Our project uses automated PowerShell modules for comprehensive quality checks:
 ```powershell
 # Run all quality checks using our automated module (recommended)
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-Invoke-AllQualityChecks -Path . -ExitOnFailure
+Invoke-AllQualityCheck -Path . -ExitOnFailure
 
 # Run specific file type checks
-Test-PowerShellScripts -Path "scripts/" -Recurse
+Test-PowerShellScript -Path "scripts/" -Recurse
 Test-ShellScripts -Path "scripts/shell/" -Recurse
 Test-YAMLFiles -Path "configs/" -Recurse
 Test-MarkdownFiles -Path "." -Recurse
@@ -186,8 +186,8 @@ Show-ToolVersion                          # Display installed tool versions
 
 # Quality Checks
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-Invoke-AllQualityChecks                    # Run all quality checks
-Test-PowerShellScripts -Path scripts/      # Check PowerShell scripts only
+Invoke-AllQualityCheck                    # Run all quality checks
+Test-PowerShellScript -Path scripts/      # Check PowerShell scripts only
 Test-ShellScripts -Path scripts/shell/     # Check shell scripts only
 Test-YAMLFiles -Path configs/              # Validate YAML files only
 
@@ -226,7 +226,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 1. **Review configurations**: Check files in `configs/` directory
 2. **Read AI instructions**: Review `.github/copilot-instructions.md` and related files
 3. **Understand the structure**: Familiarize yourself with the project layout
-4. **Test quality checks**: Run `Invoke-AllQualityChecks` to verify everything works
+4. **Test quality checks**: Run `Invoke-AllQualityCheck` to verify everything works
 5. **Start developing**: Begin working with the Proxmox VE toolkit
 6. **Use AI tools**: Leverage the configured AI assistants for development
 

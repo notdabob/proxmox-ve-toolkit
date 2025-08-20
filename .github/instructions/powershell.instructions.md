@@ -240,11 +240,11 @@ This project includes comprehensive quality checking. All PowerShell code should
 ```powershell
 # Install all quality tools (no sudo required)
 Import-Module ./scripts/powershell/Install-QualityTools.psm1
-Install-AllQualityTools
+Install-AllQualityTool
 
 # Run all quality checks
 Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-$allPassed = Invoke-AllQualityChecks -Path "." -ExitOnFailure
+$allPassed = Invoke-AllQualityCheck -Path "." -ExitOnFailure
 ```
 
 ### Quality Standards Summary

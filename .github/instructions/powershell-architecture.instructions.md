@@ -468,7 +468,7 @@ function Measure-ModulePerformance {
 
 # Usage
 $result = Measure-ModulePerformance -OperationName "Quality Check Execution" -ScriptBlock {
-    Invoke-AllQualityChecks -Path $ProjectRoot
+    Invoke-AllQualityCheck -Path $ProjectRoot
 }
 ```
 

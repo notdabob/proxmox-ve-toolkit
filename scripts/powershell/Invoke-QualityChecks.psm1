@@ -11,10 +11,10 @@
 
 .EXAMPLE
     Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
-    Invoke-AllQualityChecks
+    Invoke-AllQualityCheck
 
 .EXAMPLE
-    Test-PowerShellScripts -Path "scripts/" -Fix
+    Test-PowerShellScript -Path "scripts/powershell/" -Recurse -Fix
     Test-ShellScript -Path "scripts/shell/"
 #>
 
@@ -304,7 +304,7 @@ function Test-YAMLFile {
                             }
                             
                             # Check for common syntax issues
-                            if ($line -match ':\s*\[.*[^]]$') {
+                            if ($line -match ':\s*\[.*[^]]) {
                                 Write-Information "  ⚠️ Line $($i + 1): Possible unclosed array" -InformationAction Continue
                                 $hasErrors = $true
                             }
@@ -395,7 +395,7 @@ function Test-MarkdownFile {
         $markdownlintCmd = Get-MarkdownLintCommand
         if (-not $markdownlintCmd) {
             Write-Warning "⚠️ markdownlint not available. Possible solutions:"
-            Write-Warning "   1. Run Install-AllQualityTools to install via npx"
+            Write-Warning "   1. Run Install-AllQualityTool to install via npx"
             Write-Warning "   2. Install Node.js if npm/npx are missing"
             Write-Warning "   3. Install markdownlint globally: npm install -g markdownlint-cli"
             return $false
@@ -605,7 +605,7 @@ function Invoke-QuickFix {
             $content = Get-Content $file.FullName -Raw
             
             # Remove trailing whitespace
-            $content = $content -replace '[ \t]+(\r?\n)', '$1'
+            $content = $content -replace '[ 	]+(\r?\n)', '$1'
             
             # Ensure file ends with newline
             if (-not $content.EndsWith("`n")) {
@@ -631,21 +631,3 @@ Export-ModuleMember -Function @(
     'Invoke-AllQualityCheck',
     'Invoke-QuickFix'
 )
-
-# Export aliases for backward compatibility
-Export-ModuleMember -Alias @(
-    'Test-PowerShellScripts',
-    'Test-ShellScripts',
-    'Test-YAMLFiles', 
-    'Test-MarkdownFiles',
-    'Invoke-AllQualityChecks',
-    'Invoke-QuickFixes'
-)
-
-# Create the actual aliases
-New-Alias -Name 'Test-PowerShellScripts' -Value 'Test-PowerShellScript' -Force
-New-Alias -Name 'Test-ShellScripts' -Value 'Test-ShellScript' -Force  
-New-Alias -Name 'Test-YAMLFiles' -Value 'Test-YAMLFile' -Force
-New-Alias -Name 'Test-MarkdownFiles' -Value 'Test-MarkdownFile' -Force
-New-Alias -Name 'Invoke-AllQualityChecks' -Value 'Invoke-AllQualityCheck' -Force
-New-Alias -Name 'Invoke-QuickFixes' -Value 'Invoke-QuickFix' -Force
