@@ -10,7 +10,6 @@ Use the platform-appropriate installation script:
 # macOS/Linux (bash)
 sh scripts/install.sh
 Test-ShellScript -Path scripts/shell/     # Check shell scripts only
-Test-YAMLFile -Path configs/              # Validate YAML files only
 
 # macOS/Linux (zsh)
 zsh scripts/install.zsh
