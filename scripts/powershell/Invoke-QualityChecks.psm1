@@ -304,7 +304,7 @@ function Test-YAMLFile {
                             }
                             
                             # Check for common syntax issues
-                            if ($line -match ':\s*\[.*[^]]) {
+                            if ($line -match ':\s*\[.*[^]]') {
                                 Write-Information "  ⚠️ Line $($i + 1): Possible unclosed array" -InformationAction Continue
                                 $hasErrors = $true
                             }
@@ -460,7 +460,7 @@ function Test-MarkdownFile {
         Write-Information "" -InformationAction Continue
         Write-Information "📊 Markdown Linting Summary:" -InformationAction Continue
         Write-Information "  Files analyzed: $($files.Count)" -InformationAction Continue
-        Write-Information "  Result: $(if ($allPassed) { " -InformationAction Continue✅ All files passed" } else { "❌ Issues found" })"
+        Write-Information "  Result: $(if ($allPassed) { "✅ All files passed" } else { "❌ Issues found" })"
 
         return $allPassed
     } catch {
@@ -605,7 +605,7 @@ function Invoke-QuickFix {
             $content = Get-Content $file.FullName -Raw
             
             # Remove trailing whitespace
-            $content = $content -replace '[ 	]+(\r?\n)', '$1'
+            $content = $content -replace "[ 	]+(\r?\n)", "$1"
             
             # Ensure file ends with newline
             if (-not $content.EndsWith("`n")) {
@@ -625,7 +625,7 @@ function Invoke-QuickFix {
 # Export functions
 Export-ModuleMember -Function @(
     'Test-PowerShellScript',
-    'Test-ShellScript', 
+    'Test-ShellScript',
     'Test-YAMLFile',
     'Test-MarkdownFile',
     'Invoke-AllQualityCheck',

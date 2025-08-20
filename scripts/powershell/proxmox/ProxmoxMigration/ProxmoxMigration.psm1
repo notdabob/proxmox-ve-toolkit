@@ -86,50 +86,61 @@ function Write-LogMessage {
 function Confirm-Action {
     <#
 .SYNOPSIS
-    Presents an interactive Yes/No prompt to the user.
-
+    Interactive yes/no prompt for safety and confirmation of critical steps.
 .DESCRIPTION
-    A simple helper function to get explicit user confirmation before proceeding
-    with a critical or destructive action. It is case-insensitive and accepts
-    'y' or 'yes' as an affirmative response.
-
+    Prompts the user with the supplied message and returns $true for a positive reply (Y/y/yes/YES), $false for all other responses (including Enter).
 .PARAMETER Prompt
-    The question to present to the user.
-
-.EXAMPLE
-    PS C:\> if (Confirm-Action -Prompt "Delete all files?") { ... }
-
+    The question text to display.
 .OUTPUTS
-    System.Boolean
-    Returns $true if the user answers 'y' or 'yes'; otherwise, returns $false.
+    [bool] $true if user confirms, $false otherwise.
+.EXAMPLE
+    if (Confirm-Action "Continue to next step?") { ... }
+.NOTES
+    Always defaults to NO on Enter or any value other than a clear affirmative.
 #>
+    param(
+        [Parameter(Mandatory)][string]$Prompt
+    )
+    $resp = Read-Host "$Prompt (y/N)"
+    return $resp -match '^(y|yes)$'
+}
 
 # --------------------------------------------------------------------------
 function Get-SSHCredential {
     <#
 .SYNOPSIS
-    Gets a reusable PSCredential object for SSH authentication.
-
+    Returns (and caches) a PowerShell credential object for root SSH access to remote Proxmox nodes.
 .DESCRIPTION
-    This function provides a PSCredential object for the user defined in
-    `$script:PXM_SSHUser`. It is designed for key-based authentication and
-    defaults to an empty password, which works with an SSH agent. The credential
-    object is cached in a script-scoped variable (`$_cachedCred`) for reuse
-    across the module to avoid unnecessary object creation.
-
-.EXAMPLE
-    PS C:\> $cred = Get-SSHCredential
-    PS C:\> New-SSHSession -ComputerName "prox-node" -Credential $cred
-
+    By default, returns a PSCredential for user "root" with a blank password (for key-based SSH authentication).
+    If the module variable $script:PXM_SSHUser is defined and set to something other than 'root', that username is used.
+    Prompts for a password on first use if $env:PROXMOX_MIGRATION_FORCE_PASSWORD is set (or modify to add prompt logic if required).
+    The returned credential is cached module-wide for subsequent use in the same session.
+.PARAMETER None
 .OUTPUTS
-    System.Management.Automation.PSCredential
-    A credential object for the SSH user.
+    [PSCredential] A credential object for SSH remoting (for use with New-SSHSession).
+.EXAMPLE
+    $cred = Get-SSHCredential
+    $sess = New-SSHSession -ComputerName $ip -Credential $cred
+.NOTES
+    For key-based authentication (recommended), the password should be empty and keys must be in place (see SSH agent docs).
+    You can modify the username by setting $script:PXM_SSHUser or by editing the module's configuration.
 #>
+    # Use module-level variable for caching
     if (-not $script:_cachedCred) {
-        $script:_cachedCred = New-Object PSCredential($PXM_SSHUser, (ConvertTo-SecureString '' -AsPlainText -Force))
+        $username = if ($script:PXM_SSHUser) { $script:PXM_SSHUser } else { "root" }
+        # By default, use blank password for key-based SSH
+        $secret = ConvertTo-SecureString '' -AsPlainText -Force
+
+        # Optionally allow forcing a password prompt -- e.g., for sudo or alternate accounts
+        if ($env:PROXMOX_MIGRATION_FORCE_PASSWORD -eq "1") {
+            $secret = Read-Host "Enter SSH password for $username" -AsSecureString
+        }
+
+        $script:_cachedCred = New-Object PSCredential($username, $secret)
     }
     return $script:_cachedCred
 }
+
 
 # --------------------------------------------------------------------------
 function Test-SSHConnection {
@@ -155,6 +166,17 @@ function Test-SSHConnection {
     System.Boolean
     Returns $true if the connection is successful; otherwise, returns $false.
 #>
+    param(
+        [Parameter(Mandatory)][string]$ComputerName
+    )
+    try {
+        $sess = New-SSHSession -ComputerName $ComputerName -Credential (Get-SSHCredential) -ConnectTimeout 3 -AcceptKey -ErrorAction Stop
+        if ($sess) { Remove-SSHSession $sess | Out-Null }
+        return $true
+    } catch {
+        return $false
+    }
+}
 
 # --------------------------------------------------------------------------
 function Stop-AllVMAndContainer {
