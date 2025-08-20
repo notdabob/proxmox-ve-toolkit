@@ -1,3 +1,25 @@
+<#
+.SYNOPSIS
+    A PowerShell module containing all functions for Proxmox VE cluster migration.
+
+.DESCRIPTION
+    This module provides a set of functions to orchestrate the migration of VMs
+    and LXC containers between Proxmox VE 9.0.4 nodes. It includes functionality
+    for pre-flight checks, network optimization (LACP), cluster management,
+    Proxmox Backup Server (PBS) deployment, and robust logging and error handling.
+    All state is managed within the module, and it is designed to be called from
+    the Orchestrator.ps1 entry script.
+
+.NOTES
+    File Name      : ProxmoxMigration.psm1
+    Author         : ProxMox Space – GPT
+    Prerequisite   : PowerShell 7.0+, Posh-SSH Module
+    Copyright      : (c) 2025
+
+.LINK
+    https://github.com/lordsomer/proxmox-ve-toolkit/blob/main/scripts/powershell/proxmox/ProxmoxMigration/README.md
+#>
+
 # ProxmoxMigration.psm1
 # VERSION 1.0  (2025-08-17)
 #   PowerShell module housing every function used by Orchestrator.ps1.
@@ -22,13 +44,26 @@ $script:PXM_SSHUser = "root"
 function Write-LogMessage {
     <#
 .SYNOPSIS
-    Thread-safe, colorised logger.
+    Writes a color-coded, timestamped log message to the console and log file.
+
+.DESCRIPTION
+    This function provides a centralized logging mechanism. It respects the globally
+    configured log level, skipping debug messages if not in Debug mode. All messages
+    are prefixed with a timestamp and log level.
 
 .PARAMETER Level
-    Info | Warning | Error | Debug
+    Specifies the severity level of the message. Valid options are Info, Warning,
+    Error, or Debug.
 
 .PARAMETER Message
-    Message text
+    The text of the log message to write.
+
+.EXAMPLE
+    PS C:\> Write-LogMessage -Level Info -Message "Starting process..."
+    Logs an informational message to the console and the active log file.
+
+.OUTPUTS
+    None.
 #>
     param(
         [ValidateSet('Info', 'Warning', 'Error', 'Debug')]
@@ -50,21 +85,45 @@ function Write-LogMessage {
 # --------------------------------------------------------------------------
 function Confirm-Action {
     <#
-.SYNOPSIS  Interactive Y/N prompt.
+.SYNOPSIS
+    Presents an interactive Yes/No prompt to the user.
+
+.DESCRIPTION
+    A simple helper function to get explicit user confirmation before proceeding
+    with a critical or destructive action. It is case-insensitive and accepts
+    'y' or 'yes' as an affirmative response.
+
+.PARAMETER Prompt
+    The question to present to the user.
+
+.EXAMPLE
+    PS C:\> if (Confirm-Action -Prompt "Delete all files?") { ... }
+
+.OUTPUTS
+    System.Boolean
+    Returns $true if the user answers 'y' or 'yes'; otherwise, returns $false.
 #>
-    param(
-        [Parameter(Mandatory)][string]$Prompt
-    )
-    $resp = Read-Host "$Prompt (y/N)"
-    return $resp -match '^(y|yes)$'
-}
 
 # --------------------------------------------------------------------------
 function Get-SSHCredential {
     <#
 .SYNOPSIS
-    Returns a reusable PSCredential for the $Global:PXM_SSHUser using SSH keys
-    (no password).  If SSH agent isn’t loaded, tries blank password.
+    Gets a reusable PSCredential object for SSH authentication.
+
+.DESCRIPTION
+    This function provides a PSCredential object for the user defined in
+    `$script:PXM_SSHUser`. It is designed for key-based authentication and
+    defaults to an empty password, which works with an SSH agent. The credential
+    object is cached in a script-scoped variable (`$_cachedCred`) for reuse
+    across the module to avoid unnecessary object creation.
+
+.EXAMPLE
+    PS C:\> $cred = Get-SSHCredential
+    PS C:\> New-SSHSession -ComputerName "prox-node" -Credential $cred
+
+.OUTPUTS
+    System.Management.Automation.PSCredential
+    A credential object for the SSH user.
 #>
     if (-not $script:_cachedCred) {
         $script:_cachedCred = New-Object PSCredential($PXM_SSHUser, (ConvertTo-SecureString '' -AsPlainText -Force))
@@ -76,27 +135,37 @@ function Get-SSHCredential {
 function Test-SSHConnection {
     <#
 .SYNOPSIS
-    Lightweight reachability check (2 s timeout).
+    Performs a lightweight, quick check to verify SSH connectivity to a node.
+
+.DESCRIPTION
+    This function attempts to open and immediately close an SSH session to the
+    target computer with a short connection timeout (2 seconds). It's used for
+    quick, non-intrusive reachability checks before attempting more complex
+    operations.
 
 .PARAMETER ComputerName
-    Node IP / FQDN
+    The IP address or FQDN of the Proxmox node to test.
+
+.EXAMPLE
+    PS C:\> if (Test-SSHConnection -ComputerName "192.168.1.100") {
+    >>    Write-Host "Node is reachable."
+    >> }
+
+.OUTPUTS
+    System.Boolean
+    Returns $true if the connection is successful; otherwise, returns $false.
 #>
-    param(
-        [Parameter(Mandatory)][string]$ComputerName
-    )
-    try {
-        New-SSHSession -ComputerName $ComputerName -Credential (Get-SSHCredential) `
-            -ConnectionTimeout 2 -AcceptKey -ErrorAction Stop | Remove-SSHSession
-        return $true
-    } catch { return $false }
-}
 
 # --------------------------------------------------------------------------
 function Stop-AllVMAndContainer {
     <#
 .SYNOPSIS
-    Gracefully stops every running VM & LXC on all standalone nodes.
-    Produces CSV report under $ReportsDir.
+    Gracefully stops every running VM and LXC container on all defined nodes.
+
+.DESCRIPTION
+    Iterates through each node, lists all running VMs and containers, and then
+    calls Stop-RemoteGuest for each one. It produces a CSV report detailing the
+    outcome of each shutdown attempt.
 #>
     [CmdletBinding(SupportsShouldProcess)]
     param()
@@ -141,6 +210,34 @@ function Stop-AllVMAndContainer {
 }
 
 function Stop-RemoteGuest {
+    <#
+.SYNOPSIS
+    Stops a single VM or container on a remote node and records the result.
+
+.DESCRIPTION
+    This is a helper function that handles the logic for stopping a guest.
+    It first attempts a graceful shutdown, waits for up to 5 minutes, and if the
+    guest is still running, it forces a stop. The result is appended to the
+    shutdown CSV report.
+
+.PARAMETER Session
+    The active Posh-SSH session to the target node.
+
+.PARAMETER Type
+    The type of guest, either 'VM' or 'LXC'.
+
+.PARAMETER Id
+    The numeric ID of the guest (VMID).
+
+.PARAMETER Name
+    The name of the guest.
+
+.PARAMETER Csv
+    The file path to the CSV report to append the result to.
+
+.PARAMETER Node
+    The name of the node where the guest is running.
+#>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [SSH.SshSession]$Session, [string]$Type, [int]$Id,
@@ -174,13 +271,40 @@ function Stop-RemoteGuest {
 function Start-Migration {
     <#
 .SYNOPSIS
-    High-level wrapper that executes every migration phase in order.
+    The main, high-level function that executes the entire Proxmox migration workflow.
+
+.DESCRIPTION
+    This function serves as the primary entry point for the migration process.
+    It orchestrates a series of phases in a specific order: loading configuration,
+    running pre-flight checks, shutting down all guests, optimizing the network,
+    applying network changes, forming the cluster, deploying the backup server,
+    and finally, migrating all VMs and containers. It includes a top-level
+    try/catch block to trigger an emergency rollback if any phase fails.
+
 .PARAMETER ConfigFile
-    Optional JSON configuration file. If omitted, launches interactive setup wizard and auto-saves config.
+    The path to an optional JSON configuration file. If this file is omitted or
+    does not exist, the function triggers an interactive setup wizard to generate
+    the configuration.
+
 .PARAMETER LogLevel
-    Info (default) | Warning | Error | Debug
+    Specifies the logging verbosity. Valid options are: Info (default), Warning,
+    Error, or Debug.
+
 .PARAMETER DryRun
-    Switch to simulate mode (no remote changes).
+    A switch parameter that, if present, puts the entire module into a simulation
+    mode where no remote changes will be made. This is useful for testing the
+    script's logic.
+
+.EXAMPLE
+    PS C:\> Start-Migration -LogLevel Debug -DryRun
+    Starts the migration in interactive mode with debug logging and dry-run enabled.
+
+.EXAMPLE
+    PS C:\> Start-Migration -ConfigFile .\config\nodes_20250817_143000.json
+    Runs the migration using a specified configuration file.
+
+.OUTPUTS
+    None.
 #>
     [CmdletBinding()]
     param(
@@ -272,7 +396,17 @@ function Start-Migration {
 function Invoke-NetworkOptimisation {
     <#
 .SYNOPSIS
-    Runs iperf3 baseline/network tests, applies LACP config, reruns benchmarks, saves results.
+    Benchmarks network, applies LACP bonding, and runs benchmarks again.
+
+.DESCRIPTION
+    This function orchestrates the network optimization phase. It first runs
+    iperf3 between all nodes to establish a baseline. It then configures a
+    9000 MTU LACP bond (802.3ad, layer2+3) on all nodes using the interfaces
+    defined in the config. Finally, it runs the iperf3 benchmarks again to
+    measure the improvement. Results are saved to CSV reports.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
 #>
     param([hashtable]$Nodes)
     Write-LogMessage Info 'Running baseline network benchmarks (iperf3)...'
@@ -375,7 +509,16 @@ iface vmbr0 inet manual
 function Set-NetworkChange {
     <#
 .SYNOPSIS
-    Applies new hostnames and IPs (auto-backup before modifying).
+    Applies new hostnames to the nodes as defined in the configuration.
+
+.DESCRIPTION
+    This function connects to each node and updates `/etc/hostname` and `/etc/hosts`
+    to reflect the desired hostname from the configuration. It does not handle
+    IP address changes, as those are applied as part of the LACP bonding in
+    the Invoke-NetworkOptimisation function.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
 #>
     [CmdletBinding(SupportsShouldProcess)]
     param([hashtable]$Nodes)
@@ -401,7 +544,18 @@ function Set-NetworkChange {
 function New-ProxmoxCluster {
     <#
 .SYNOPSIS
-    Forms initial cluster (pm1 + rg-prox03), adds rg-prox01 after migration.
+    Forms the Proxmox cluster in a phased approach.
+
+.DESCRIPTION
+    First, it creates the cluster on the primary node (pm1). Second, it joins
+    the backup node (rg-prox03). Finally, after the migration is complete, it
+    joins the source migration node (rg-prox01) to the cluster.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
+
+.PARAMETER ClusterName
+    The name for the new Proxmox cluster.
 #>
     [CmdletBinding(SupportsShouldProcess)]
     param([hashtable]$Nodes, [string]$ClusterName)
@@ -432,7 +586,21 @@ function New-ProxmoxCluster {
 function Deploy-ProxmoxBackupServer {
     <#
 .SYNOPSIS
-    Deploys PBS as new VM on rg-prox03, downloads ISO, configures.
+    Deploys a new Proxmox Backup Server (PBS) VM on the backup node.
+
+.DESCRIPTION
+    This function downloads the latest PBS ISO image, creates a new VM on the
+    specified backup node (rg-prox03) with the configured VMID and memory,
+    attaches the ISO, and starts the VM to begin the installation process.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
+
+.PARAMETER VMID
+    The numeric ID to assign to the new PBS VM.
+
+.PARAMETER MemoryMB
+    The amount of RAM in megabytes to allocate to the PBS VM.
 #>
     param([hashtable]$Nodes, [int]$VMID, [int]$MemoryMB)
     $rg_prox03IP = $Nodes['rg-prox03'].IP
@@ -453,7 +621,16 @@ function Deploy-ProxmoxBackupServer {
 function Invoke-Migration {
     <#
 .SYNOPSIS
-    Migrates all VMs and LXCs from rg-prox01 to pm1 with integrity checks and multi-stream rsync.
+    Migrates all VMs and LXCs from the source node to the destination node.
+
+.DESCRIPTION
+    This function handles the core data migration. It iterates through all VMs
+    and containers on the source node (rg-prox01), ensures they are stopped,
+    and then uses rsync to copy their disk images and configuration files to
+    the destination node (pm1). It uses checksums to ensure data integrity.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
 #>
     param([hashtable]$Nodes)
     $srcIP = $Nodes['rg-prox01'].IP
@@ -504,7 +681,12 @@ function Invoke-Migration {
 function New-FinalReport {
     <#
 .SYNOPSIS
-    Creates summary logs and migration reports, zips everything for audit/compliance.
+    Generates and archives all final migration reports.
+
+.DESCRIPTION
+    This function gathers all the CSV reports generated during the migration,
+    compiles them into a single summary text file, and then creates a zip archive
+    of all reports for audit and compliance purposes.
 #>
     [CmdletBinding(SupportsShouldProcess)]
     param()
@@ -529,7 +711,16 @@ function New-FinalReport {
 function Invoke-EmergencyRollback {
     <#
 .SYNOPSIS
-    If migration fails, restores network configs, starts all guests, tries cluster config cleanup.
+    Attempts to roll back changes if a critical failure occurs during migration.
+
+.DESCRIPTION
+    This function is called by the main catch block in Start-Migration. It attempts
+    to restore the original network configurations from backups, restart all guest
+    VMs/containers, and clean up any partial cluster configurations to return the
+    nodes to their pre-migration state.
+
+.PARAMETER Nodes
+    The node configuration hashtable.
 #>
     param([hashtable]$Nodes)
     Write-LogMessage Error \"EMERGENCY ROLLBACK INITIATED!\"

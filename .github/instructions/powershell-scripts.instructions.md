@@ -13,38 +13,45 @@ executables, installers, utilities, or cmdlets that perform specific tasks.
 
 ### Script Header Requirements
 
-Every `.ps1` script must include a comprehensive header:
+Every `.ps1` script MUST include a comprehensive header. All sections are mandatory to ensure clarity and consistency.
 
 ```powershell
 <#
 .SYNOPSIS
-    Brief one-line description of what the script does
+    A brief, one-line summary of the script's purpose.
 
 .DESCRIPTION
-    Detailed description of the script's functionality, purpose, and behavior.
-    Include information about what the script accomplishes and any important
-    usage considerations.
+    A detailed description of the script's functionality, purpose, and behavior.
+    Explain what the script accomplishes, any prerequisites not covered in .NOTES,
+    and important usage considerations.
 
 .PARAMETER ParameterName
-    Description of each parameter, including type, purpose, and valid values
+    Description of each parameter, including its type, purpose, and valid values.
+    This section should be repeated for each parameter.
 
 .EXAMPLE
-    .\ScriptName.ps1 -Parameter "value"
-    Description of what this example does
+    PS C:\> .\ScriptName.ps1 -Parameter "value"
+    Description of what this example achieves.
 
 .EXAMPLE
-    .\ScriptName.ps1 -Parameter "value" -AnotherParam
-    Additional example showing different usage
+    PS C:\> .\ScriptName.ps1 -Parameter "value" -AnotherParam
+    A second example demonstrating different usage or parameters.
+
+.OUTPUTS
+    System.String
+    Description of the objects that the script returns to the pipeline. If the
+    script does not return any output, specify "None".
 
 .NOTES
     File Name      : ScriptName.ps1
     Author         : [Author Name]
-    Prerequisite   : PowerShell 7.0+
+    Prerequisite   : PowerShell 7.0+, Posh-SSH Module
     Copyright      : [Copyright Info]
+    Additional notes, known issues, or other relevant information.
 
 .LINK
-    https://github.com/your-repo/docs
-#>
+    https://github.com/your-repo/docs/path/to/relevant/doc.md
+#/>
 ```
 
 ### Parameter Declaration
@@ -141,12 +148,12 @@ For installation and setup scripts:
 <#
 .SYNOPSIS
     Installs and configures [component name]
-#>
+#/>
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$InstallPath = "$env:USERPROFILE\\.toolname",
+    [string]$InstallPath = "$env:USERPROFILE\.toolname",
 
     [Parameter(Mandatory = $false)]
     [switch]$Update,
@@ -213,7 +220,7 @@ For utility and helper scripts:
 <#
 .SYNOPSIS
     Utility script for [specific task]
-#>
+#/>
 
 [CmdletBinding()]
 param(
@@ -321,7 +328,7 @@ if ($IsMacOS) {
 } elseif ($IsLinux) {
     $defaultPath = "~/.config/toolname"
 } elseif ($IsWindows) {
-    $defaultPath = "$env:APPDATA\\ToolName"
+    $defaultPath = "$env:APPDATA\ToolName"
 } else {
     throw "Unsupported operating system"
 }

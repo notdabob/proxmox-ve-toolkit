@@ -377,6 +377,25 @@ Export-ModuleMember -Function @(
 # Export-ModuleMember -Alias @('gsd')
 ```
 
+### Function Documentation Standards
+
+To ensure clarity without creating unnecessary overhead, documentation requirements are based on function visibility (public vs. private).
+
+#### Public (Exported) Functions
+
+All functions exported from a module using `Export-ModuleMember` **MUST** have a complete comment-based help block. This is critical for users and other scripts that will consume the module.
+
+- **All sections are mandatory:** `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`, `.OUTPUTS`, `.NOTES`, and `.LINK`.
+- The `Get-SampleData` function in the template above is a good example of a well-documented public function.
+
+#### Private (Internal) Functions
+
+Functions that are not exported are considered internal helpers for the module. They require a less strict, but still informative, comment block.
+
+- **Mandatory sections:** `.SYNOPSIS` and `.PARAMETER` (if the function takes parameters).
+- **Recommended sections:** `.DESCRIPTION` and `.EXAMPLE` are highly recommended for complex helper functions.
+- The `Test-ConfigurationSettings` function in the template above shows an example of a minimal block for a private function.
+
 ## Module Manifest (.psd1)
 
 ### Creating Module Manifests
