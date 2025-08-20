@@ -1,6 +1,6 @@
 #!/bin/sh
-# Cross-platform bootstrapper for AI Code Assist Boilerplate (POSIX shell)
-# Installs PowerShell if missing, then runs PowerShell installer
+# Cross-platform bootstrapper for Proxmox VE Toolkit (POSIX shell)
+# Installs PowerShell if missing, then runs PowerShell installer with quality tools
 
 set -e
 

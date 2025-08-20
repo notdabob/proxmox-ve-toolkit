@@ -1,0 +1,24 @@
+{
+  "name": "proxmox-ve-toolkit",
+  "version": "1.0.0",
+  "description": "A comprehensive template for setting up development environments optimized for AI-assisted coding with tools like Claude, Gemini, and GitHub Copilot.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notdabob/proxmox-ve-toolkit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/notdabob/proxmox-ve-toolkit/issues"
+  },
+  "homepage": "https://github.com/notdabob/proxmox-ve-toolkit#readme"
+}

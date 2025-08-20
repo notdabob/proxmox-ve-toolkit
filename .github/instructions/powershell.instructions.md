@@ -220,3 +220,98 @@ Describe "ModuleName Tests" {
 - Respect environment variables for sensitive settings
 - Provide sensible defaults for optional configurations
 - Handle missing or invalid configuration gracefully
+
+## Quality Check Integration
+
+### Automated Quality Tools
+
+This project includes automated quality check modules:
+
+```powershell
+# Install quality tools automatically
+Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Install-AllQualityTools
+
+# Run comprehensive quality checks
+Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
+Invoke-AllQualityChecks
+
+# Test specific script types
+Test-PowerShellScripts -Path "scripts/" -Recurse
+Test-ShellScripts -Path "scripts/shell/" -Recurse
+Test-YAMLFiles -Path "configs/" -Recurse
+```
+
+### Quality Standards
+
+All PowerShell scripts should:
+
+- Pass PSScriptAnalyzer without warnings
+- Follow consistent error handling patterns
+- Include proper parameter validation
+- Use appropriate output formatting with emoji/symbols
+- Handle cross-platform differences gracefully
+
+### Module Development Pattern
+
+When creating new PowerShell modules:
+
+1. **Follow the established naming pattern**: `Verb-Noun.psm1`
+2. **Include comprehensive help documentation** with examples
+3. **Implement proper error handling** with try/catch blocks
+4. **Add parameter validation** with appropriate attributes
+5. **Export functions explicitly** using `Export-ModuleMember`
+6. **Test cross-platform compatibility** where possible
+
+Example quality-compliant module structure:
+
+```powershell
+<#
+.SYNOPSIS
+    Module for [specific functionality]
+
+.DESCRIPTION
+    Detailed description of module capabilities and use cases
+
+.EXAMPLE
+    Import-Module ./path/to/Module.psm1
+    Use-ModuleFunction -Parameter "value"
+#>
+
+$ErrorActionPreference = "Stop"
+
+function Use-ModuleFunction {
+    <#
+    .SYNOPSIS
+        Brief function description
+
+    .PARAMETER InputValue
+        Description of parameter and its usage
+
+    .EXAMPLE
+        Use-ModuleFunction -InputValue "test"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$InputValue
+    )
+
+    try {
+        Write-Host "🔄 Processing: $InputValue" -ForegroundColor Blue
+
+        # Implementation logic here
+        $result = "processed-$InputValue"
+
+        Write-Host "✅ Processing completed successfully" -ForegroundColor Green
+        return $result
+    }
+    catch {
+        Write-Error "❌ Processing failed: $($_.Exception.Message)"
+        throw
+    }
+}
+
+Export-ModuleMember -Function Use-ModuleFunction
+```

@@ -1,0 +1,24 @@
+{
+  // Markdownlint configuration for the Proxmox VE Toolkit project
+  "extends": null,
+  "MD013": {
+    // Line length - allow longer lines for code and documentation
+    "line_length": 150,
+    "heading_line_length": 120,
+    "code_block_line_length": 200,
+    "tables": false
+  },
+  "MD025": {
+    // Multiple top-level headings - allow for template documentation
+    "level": 1
+  },
+  "MD033": {
+    // HTML elements - allow for enhanced documentation
+    "allowed_elements": ["details", "summary", "br", "kbd", "sup", "sub"]
+  },
+  "MD040": false,
+  "MD041": {
+    // First line should be h1 - disable for instruction files with YAML frontmatter
+    "level": 1
+  }
+}

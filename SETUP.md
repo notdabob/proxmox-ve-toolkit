@@ -34,20 +34,29 @@ Edit `.env` and add your:
 - `CLAUDE_API_KEY` - Get from [Anthropic Console](https://console.anthropic.com/)
 - `GEMINI_API_KEY` - Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-### 2. Install Quality Check Tools
+### 2. Install Quality Check Tools (Automatic)
+
+The installation script will automatically install:
 
 ```powershell
-# Install PowerShell Script Analyzer (cross-platform)
+# PowerShell Script Analyzer (cross-platform)
 Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
 
-# Install shellcheck for shell script validation (macOS/Linux)
-# macOS:
-brew install shellcheck
+# shellcheck for shell script validation
+# Installed automatically based on your platform:
+# - macOS: via Homebrew
+# - Linux: via apt/yum/dnf
+# - Windows: via Scoop or Chocolatey
 
-# Ubuntu/Debian:
-sudo apt-get install shellcheck
+# yq for YAML validation
+# Installed automatically based on your platform
+```
 
-# Or use package manager of choice
+Or install manually using our PowerShell module:
+
+```powershell
+Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Install-AllQualityTools
 ```
 
 ## Development Workflow
@@ -55,14 +64,29 @@ sudo apt-get install shellcheck
 ### Code Quality
 
 ```powershell
+# Run all quality checks using our automated module
+Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
+Invoke-AllQualityChecks
+
+# Run specific checks
+Test-PowerShellScripts -Path "scripts/" -Recurse
+Test-ShellScripts -Path "scripts/shell/" -Recurse
+Test-YAMLFiles -Path "configs/" -Recurse
+
+# Apply automatic fixes where possible
+Invoke-QuickFixes
+```
+
+### Manual Quality Checks
+
+If you prefer to run tools individually:
+
+```powershell
 # PowerShell script analysis
 Invoke-ScriptAnalyzer -Path scripts/ -Recurse
 
 # Check specific PowerShell file
 Invoke-ScriptAnalyzer -Path scripts/MyScript.ps1
-
-# PowerShell formatting (if using PowerShell extension in VS Code)
-# Format-Document command in VS Code
 ```
 
 ```bash
@@ -71,12 +95,23 @@ shellcheck scripts/install.sh
 shellcheck scripts/**/*.sh
 
 # YAML configuration validation
-# Using yq (install via: brew install yq)
 yq validate configs/*.yaml
-
-# Or using Python yaml module (if available)
-python -c "import yaml; yaml.safe_load(open('configs/ai-tools.yaml'))"
 ```
+
+### GitHub Actions (Automated CI)
+
+Quality checks run automatically on every push and pull request via GitHub Actions:
+
+- **PowerShell Analysis**: PSScriptAnalyzer checks all `.ps1`, `.psm1`, and `.psd1` files
+- **Shell Script Validation**: shellcheck validates all `.sh`, `.bash`, and `.zsh` files
+- **YAML Validation**: yq validates all `.yaml` and `.yml` configuration files
+
+The CI workflow is defined in `.github/workflows/quality-checks.yml` and will:
+
+1. Install all necessary quality tools
+2. Run comprehensive analysis on your code
+3. Report any issues that need to be fixed
+4. Block merges if critical issues are found
 
 ### Using AI Assistants
 
@@ -96,35 +131,49 @@ The configuration files in `configs/` define:
 ## Project Structure
 
 ```
-ai-codeassist-boilerplate/
-├── .claude/                    # Claude-specific configuration and commands
-├── .github/                    # GitHub workflows and Copilot instructions
-│   ├── copilot-instructions.md # Main GitHub Copilot instructions
-│   └── instructions/           # Specific instruction files
-├── configs/                    # YAML configuration files
-│   ├── ai-tools.yaml          # AI service configurations
-│   ├── code-stack.yaml        # Development stack settings
-│   └── *.yaml                 # Other configuration files
-├── scripts/                    # Cross-platform utility scripts
-│   ├── Run-Python.psm1        # PowerShell Python runner
-│   └── Get-ProviderModels.psm1 # AI model fetching utility
-├── .env                        # Environment variables (create from .env.example)
-├── .env.example               # Environment variable template
-└── README.md                  # Main project documentation
+proxmox-ve-toolkit/
+├── .github/                       # GitHub workflows and Copilot instructions
+│   ├── copilot-instructions.md    # Main GitHub Copilot instructions
+│   ├── instructions/              # File-type specific instruction files
+│   └── workflows/                 # CI/CD workflows (quality checks)
+├── configs/                       # YAML configuration files
+│   ├── ai-tools.yaml             # AI service configurations
+│   ├── code-stack.yaml           # Development stack settings
+│   └── *.yaml                    # Other configuration files
+├── scripts/                       # Cross-platform utility scripts
+│   ├── powershell/                # PowerShell modules and scripts
+│   │   ├── Install-QualityTools.psm1  # Quality tools installer
+│   │   ├── Invoke-QualityChecks.psm1  # Automated quality checks
+│   │   ├── Invoke-Python.psm1         # Python runner utility
+│   │   └── install.ps1                # Main installation script
+│   └── shell/                     # Shell scripts
+│       └── install.sh             # Shell bootstrapper script
+├── .env                          # Environment variables (create from .env.example)
+├── .env.example                  # Environment variable template
+└── README.md                     # Main project documentation
 ```
 
 ## PowerShell Module Usage
 
-This project includes PowerShell modules for cross-platform automation:
+This project includes PowerShell modules for automation and quality assurance:
 
 ```powershell
-# Import and use Python runner
-Import-Module ./scripts/Run-Python.psm1
-Run-Python "your_script.py"
+# Quality Tools Management
+Import-Module ./scripts/powershell/Install-QualityTools.psm1
+Install-AllQualityTools                    # Install all quality check tools
+Test-QualityToolsInstallation             # Verify tools are working
+Show-ToolVersions                          # Display installed tool versions
 
-# Fetch AI provider models
-Import-Module ./scripts/Get-ProviderModels.psm1
-Get-ProviderModels -Provider "claude" -OutputPath "./configs/claude_models.json"
+# Quality Checks
+Import-Module ./scripts/powershell/Invoke-QualityChecks.psm1
+Invoke-AllQualityChecks                    # Run all quality checks
+Test-PowerShellScripts -Path scripts/      # Check PowerShell scripts only
+Test-ShellScripts -Path scripts/shell/     # Check shell scripts only
+Test-YAMLFiles -Path configs/              # Validate YAML files only
+
+# Python Integration (if needed)
+Import-Module ./scripts/powershell/Invoke-Python.psm1
+Invoke-Python "script.py"                 # Run Python scripts cross-platform
 ```
 
 ## Troubleshooting
@@ -157,8 +206,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 1. **Review configurations**: Check files in `configs/` directory
 2. **Read AI instructions**: Review `.github/copilot-instructions.md` and related files
 3. **Understand the structure**: Familiarize yourself with the project layout
-4. **Start developing**: Begin working with the toolkit
-5. **Use AI tools**: Leverage the configured AI assistants for development
+4. **Test quality checks**: Run `Invoke-AllQualityChecks` to verify everything works
+5. **Start developing**: Begin working with the Proxmox VE toolkit
+6. **Use AI tools**: Leverage the configured AI assistants for development
 
 ## Additional Resources
 
