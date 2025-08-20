@@ -9,7 +9,6 @@ Use the platform-appropriate installation script:
 ```bash
 # macOS/Linux (bash)
 sh scripts/install.sh
-Test-ShellScript -Path scripts/shell/     # Check shell scripts only
 
 # macOS/Linux (zsh)
 zsh scripts/install.zsh

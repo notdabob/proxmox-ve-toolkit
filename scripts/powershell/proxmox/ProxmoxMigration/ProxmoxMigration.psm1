@@ -101,7 +101,7 @@ function Confirm-Action {
     param(
         [Parameter(Mandatory)][string]$Prompt
     )
-    $resp = Read-Host "$Prompt [y/N]:"
+    $resp = Read-Host "$Prompt [y/N]"
     return $resp -imatch '^(y|yes)$'
 }
 
