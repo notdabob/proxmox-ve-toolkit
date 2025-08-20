@@ -2,20 +2,8 @@
 
 Write-Host "🚀 Starting full installation..."
 
-# Import the Run-Python module for cross-platform Python execution
-Import-Module -Force "$(Join-Path $PSScriptRoot 'Run-Python.psm1')"
-
-# Check if Poetry is installed
-if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-    Write-Host "📦 Installing Poetry..."
-    Invoke-WebRequest -Uri https://install.python-poetry.org -OutFile install-poetry.py
-    Run-Python "install-poetry.py"
-    Remove-Item install-poetry.py
-}
-
-# Install dependencies using Poetry
-Write-Host "📥 Installing dependencies with Poetry..."
-poetry install
+# Import the Invoke-Python module for cross-platform Python execution
+Import-Module -Force "$(Join-Path $PSScriptRoot 'Invoke-Python.psm1')"
 
 function Install-SuperClaude {
     param(

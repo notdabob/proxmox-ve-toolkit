@@ -7,6 +7,7 @@ applyTo: ["*.md", "docs/**/*.md", ".claude/**/*.md"]
 ## Documentation Standards
 
 ### Writing Style
+
 - Write in clear, concise English
 - Use active voice when possible
 - Structure content with logical headings and subheadings
@@ -14,6 +15,7 @@ applyTo: ["*.md", "docs/**/*.md", ".claude/**/*.md"]
 - Keep paragraphs focused and not overly long
 
 ### Markdown Formatting
+
 - Use consistent heading levels (start with # for main title, ## for sections)
 - Use code blocks with appropriate language highlighting
 - Include table of contents for longer documents
@@ -21,12 +23,14 @@ applyTo: ["*.md", "docs/**/*.md", ".claude/**/*.md"]
 - Format code inline with backticks for short snippets
 
 Example structure:
-```markdown
+
+````markdown
 # Document Title
 
 Brief overview of what this document covers.
 
 ## Table of Contents
+
 - [Section 1](#section-1)
 - [Section 2](#section-2)
 - [Examples](#examples)
@@ -42,11 +46,13 @@ More specific information.
 ```language
 code example here
 ```
+````
 
 ## Examples
 
 Practical examples showing usage.
-```
+
+````
 
 ### Code Examples
 - Always include working, tested code examples
@@ -171,8 +177,10 @@ Files in `.claude/` directory should:
 Brief description of what the command does.
 
 ### Usage
-```
+````
+
 command-syntax [options] arguments
+
 ```
 
 ### Parameters
@@ -181,11 +189,15 @@ command-syntax [options] arguments
 
 ### Examples
 ```
+
 # Basic usage
+
 command-example
 
 # Advanced usage
+
 command-example --option value
+
 ```
 
 ### Output
@@ -193,21 +205,26 @@ Description of expected output or results.
 ```
 
 ### Configuration Section Template
-```markdown
+
+````markdown
 ### Configuration Section
 
 Brief description of this configuration section.
 
 #### Options
+
 - `option_name` (type, default): Description of what this option controls
 - `another_option` (type, required): Description of required option
 
 #### Example
+
 ```yaml
 section_name:
   option_name: value
   another_option: required_value
 ```
+````
+
 ```
 
 ### Integration with AI Coding
@@ -216,3 +233,4 @@ section_name:
 - Include comprehensive context in each document
 - Structure information in predictable ways
 - Provide clear examples that demonstrate proper usage patterns
+```
